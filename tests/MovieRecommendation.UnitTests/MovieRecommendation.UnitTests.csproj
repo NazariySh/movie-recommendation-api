@@ -26,6 +26,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\MovieRecommendation.Application\MovieRecommendation.Application.csproj" />
+    <ProjectReference Include="..\..\src\MovieRecommendation.Infrastructure\MovieRecommendation.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
