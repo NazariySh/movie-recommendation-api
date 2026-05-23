@@ -44,8 +44,6 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
 
     public DbSet<MovieRating> Ratings { get; set; }
 
-    public DbSet<SeasonRating> SeasonRatings { get; set; }
-
     public DbSet<WatchlistItem> WatchlistItems { get; set; }
 
     public DbSet<WatchHistory> WatchHistory { get; set; }

@@ -18,13 +18,7 @@ public class Season : BaseEntity, ISoftDeletable
 
     public decimal? VoteAverage { get; set; }
 
-    public decimal AverageRating { get; set; }
-
-    public int RatingsCount { get; set; }
-
     public bool IsDeleted { get; set; }
 
     public Movie Movie { get; set; } = null!;
-
-    public ICollection<SeasonRating> Ratings { get; set; } = [];
 }

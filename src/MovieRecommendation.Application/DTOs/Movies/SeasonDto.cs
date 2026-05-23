@@ -17,10 +17,4 @@ public class SeasonDto
     public DateTime? AirDate { get; set; }
 
     public decimal? VoteAverage { get; set; }
-
-    public decimal AverageRating { get; set; }
-
-    public int RatingsCount { get; set; }
-
-    public decimal? MyRating { get; set; }
 }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using MovieRecommendation.API.Extensions;
 using MovieRecommendation.Application.DTOs.Users;
+using MovieRecommendation.Application.Features.Ratings.Queries.GetUserRatings;
 using MovieRecommendation.Application.Features.Users.Commands.ChangePassword;
 using MovieRecommendation.Application.Features.Users.Commands.DeleteUser;
 using MovieRecommendation.Application.Features.Users.Commands.UpdateGenrePreferences;
@@ -15,8 +16,6 @@ using MovieRecommendation.Application.Features.Users.Queries.GetPublicProfile;
 
 namespace MovieRecommendation.API.Controllers;
 
-[ApiController]
-[Route("api/users")]
 public class UsersController : BaseController
 {
     public UsersController(IMediator mediator)
@@ -113,5 +112,17 @@ public class UsersController : BaseController
     {
         var profile = await Mediator.Send(new GetPublicProfileQuery(id), ct);
         return Ok(profile);
+    }
+
+    [HttpGet("{userId:guid}/ratings")]
+    public async Task<IActionResult> GetUserRatings(
+        Guid userId,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken ct = default)
+    {
+        var lang = HttpContext.GetRequestLanguage();
+        var page = await Mediator.Send(new GetUserRatingsQuery(userId, pageNumber, pageSize, lang), ct);
+        return Ok(page);
     }
 }

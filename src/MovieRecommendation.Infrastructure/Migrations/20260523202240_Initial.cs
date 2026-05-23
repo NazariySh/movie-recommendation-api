@@ -253,8 +253,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                     episode_count = table.Column<int>(type: "integer", nullable: false),
                     air_date = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
                     vote_average = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: true),
-                    average_rating = table.Column<decimal>(type: "numeric", nullable: false),
-                    ratings_count = table.Column<int>(type: "integer", nullable: false),
                     is_deleted = table.Column<bool>(type: "boolean", nullable: false),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
                     updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "now()")
@@ -635,33 +633,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-            migrationBuilder.CreateTable(
-                name: "season_ratings",
-                columns: table => new
-                {
-                    id = table.Column<Guid>(type: "uuid", nullable: false),
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    season_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    score = table.Column<decimal>(type: "numeric(5,2)", precision: 5, scale: 2, nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false, defaultValueSql: "now()"),
-                    updated_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true, defaultValueSql: "now()")
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_season_ratings", x => x.id);
-                    table.ForeignKey(
-                        name: "fk_season_ratings_seasons_season_id",
-                        column: x => x.season_id,
-                        principalTable: "seasons",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_season_ratings_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
 
             migrationBuilder.CreateTable(
                 name: "review_helpful_votes",
@@ -843,17 +814,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "ix_season_ratings_season_id",
-                table: "season_ratings",
-                column: "season_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_season_ratings_user_id_season_id",
-                table: "season_ratings",
-                columns: new[] { "user_id", "season_id" },
-                unique: true);
-
-            migrationBuilder.CreateIndex(
                 name: "ix_seasons_movie_id_season_number",
                 table: "seasons",
                 columns: new[] { "movie_id", "season_number" },
@@ -973,9 +933,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "role_claims");
-
-            migrationBuilder.DropTable(
-                name: "season_ratings");
 
             migrationBuilder.DropTable(
                 name: "survey_responses");

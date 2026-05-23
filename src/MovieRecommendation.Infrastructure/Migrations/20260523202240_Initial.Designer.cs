@@ -615,10 +615,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("air_date");
 
-                    b.Property<decimal>("AverageRating")
-                        .HasColumnType("numeric")
-                        .HasColumnName("average_rating");
-
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp with time zone")
@@ -652,10 +648,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("poster_url");
 
-                    b.Property<int>("RatingsCount")
-                        .HasColumnType("integer")
-                        .HasColumnName("ratings_count");
-
                     b.Property<int>("SeasonNumber")
                         .HasColumnType("integer")
                         .HasColumnName("season_number");
@@ -679,51 +671,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasDatabaseName("ix_seasons_movie_id_season_number");
 
                     b.ToTable("seasons", (string)null);
-                });
-
-            modelBuilder.Entity("MovieRecommendation.Domain.Entities.Movies.SeasonRating", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid")
-                        .HasColumnName("id");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<decimal>("Score")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("numeric(5,2)")
-                        .HasColumnName("score");
-
-                    b.Property<Guid>("SeasonId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("season_id");
-
-                    b.Property<DateTime?>("UpdatedAt")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("now()");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("user_id");
-
-                    b.HasKey("Id")
-                        .HasName("pk_season_ratings");
-
-                    b.HasIndex("SeasonId")
-                        .HasDatabaseName("ix_season_ratings_season_id");
-
-                    b.HasIndex("UserId", "SeasonId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_season_ratings_user_id_season_id");
-
-                    b.ToTable("season_ratings", (string)null);
                 });
 
             modelBuilder.Entity("MovieRecommendation.Domain.Entities.Movies.WatchHistory", b =>
@@ -1554,27 +1501,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                     b.Navigation("Movie");
                 });
 
-            modelBuilder.Entity("MovieRecommendation.Domain.Entities.Movies.SeasonRating", b =>
-                {
-                    b.HasOne("MovieRecommendation.Domain.Entities.Movies.Season", "Season")
-                        .WithMany("Ratings")
-                        .HasForeignKey("SeasonId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_season_ratings_seasons_season_id");
-
-                    b.HasOne("MovieRecommendation.Domain.Entities.Users.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_season_ratings_users_user_id");
-
-                    b.Navigation("Season");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("MovieRecommendation.Domain.Entities.Movies.WatchHistory", b =>
                 {
                     b.HasOne("MovieRecommendation.Domain.Entities.Movies.Movie", "Movie")
@@ -1755,11 +1681,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                     b.Navigation("Translations");
 
                     b.Navigation("WatchHistory");
-                });
-
-            modelBuilder.Entity("MovieRecommendation.Domain.Entities.Movies.Season", b =>
-                {
-                    b.Navigation("Ratings");
                 });
 
             modelBuilder.Entity("MovieRecommendation.Domain.Entities.Reviews.MovieReview", b =>

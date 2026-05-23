@@ -259,14 +259,6 @@ public class ArtistRepository : BaseRepository<Person>, IArtistRepository
         return query.AnyAsync(cancellationToken);
     }
 
-    public Task<Person?> GetByImdbIdAsync(string imdbId, CancellationToken cancellationToken = default)
-    {
-        return DbContext.People
-            .AsNoTracking()
-            .Where(p => p.ImdbId == imdbId && !p.IsDeleted)
-            .FirstOrDefaultAsync(cancellationToken);
-    }
-
     public async Task<IReadOnlyDictionary<string, Person>> GetByImdbIdsAsync(
         IReadOnlyCollection<string> imdbIds,
         CancellationToken cancellationToken = default)

@@ -1,6 +1,5 @@
 using AutoMapper;
 using MovieRecommendation.Application.DTOs.Movies;
-using MovieRecommendation.Application.DTOs.Ratings;
 using MovieRecommendation.Domain.Constants;
 using MovieRecommendation.Domain.Entities.Movies;
 
@@ -13,7 +12,6 @@ public class MovieProfile : Profile
     public MovieProfile()
     {
         string lang = null!;
-        Guid currentUserId = default;
 
         CreateMap<CreateMovieDto, Movie>()
             .ForMember(d => d.Id, opt => opt.Ignore())
@@ -55,13 +53,7 @@ public class MovieProfile : Profile
             .ForMember(d => d.PersonId, opt => opt.MapFrom(s => s.PersonId))
             .ForMember(d => d.PhotoUrl, opt => opt.MapFrom(s => s.Person.PhotoUrl));
 
-        CreateMap<Season, SeasonDto>()
-            .ForMember(d => d.MyRating, opt => opt.MapFrom(s =>
-                currentUserId == Guid.Empty
-                    ? (decimal?)null
-                    : s.Ratings.Where(r => r.UserId == currentUserId).Select(r => (decimal?)r.Score).FirstOrDefault()));
-
-        CreateMap<SeasonRating, SeasonRatingDto>();
+        CreateMap<Season, SeasonDto>();
 
         CreateMap<Movie, MovieDto>()
             .ForMember(d => d.Title, opt => opt.MapFrom(s =>
