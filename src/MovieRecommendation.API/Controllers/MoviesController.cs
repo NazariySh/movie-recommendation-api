@@ -20,8 +20,6 @@ using MovieRecommendation.Application.Features.Reviews.Queries.GetMovieReviews;
 
 namespace MovieRecommendation.API.Controllers;
 
-[ApiController]
-[Route("api/movies")]
 public class MoviesController : BaseController
 {
     public MoviesController(IMediator mediator) : base(mediator)

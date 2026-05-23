@@ -5,8 +5,6 @@ using MovieRecommendation.Application.Features.Genres.Queries.GetAllGenres;
 
 namespace MovieRecommendation.API.Controllers;
 
-[ApiController]
-[Route("api/genres")]
 public class GenresController : BaseController
 {
     public GenresController(IMediator mediator) : base(mediator)

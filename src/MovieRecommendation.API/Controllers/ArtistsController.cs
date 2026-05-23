@@ -9,8 +9,6 @@ using MovieRecommendation.Application.Features.Artists.Queries.GetPopularArtists
 
 namespace MovieRecommendation.API.Controllers;
 
-[ApiController]
-[Route("api/artists")]
 public class ArtistsController : BaseController
 {
     public ArtistsController(IMediator mediator) : base(mediator)

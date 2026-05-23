@@ -25,8 +25,6 @@ public interface IArtistRepository : IRepository<Person>
 
     Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null, CancellationToken cancellationToken = default);
 
-    Task<Person?> GetByImdbIdAsync(string imdbId, CancellationToken cancellationToken = default);
-
     Task<IReadOnlyDictionary<string, Person>> GetByImdbIdsAsync(
         IReadOnlyCollection<string> imdbIds,
         CancellationToken cancellationToken = default);
