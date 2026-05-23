@@ -18,9 +18,9 @@ public class RecommendationSettings
 
     public int BayesianMinVotes { get; set; } = 10;
 
-    public double BayesianGlobalMean { get; set; } = 3.5;
+    public double BayesianGlobalMean { get; set; } = 7.0;
 
-    public double LikedThreshold { get; set; } = 4.0;
+    public double LikedThreshold { get; set; } = 8.0;
 
-    public double DislikedThreshold { get; set; } = 2.0;
+    public double DislikedThreshold { get; set; } = 4.0;
 }
