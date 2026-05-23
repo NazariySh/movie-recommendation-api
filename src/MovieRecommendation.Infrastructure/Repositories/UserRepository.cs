@@ -6,6 +6,7 @@ using MovieRecommendation.Application.Common.Constants;
 using MovieRecommendation.Application.DTOs.Admin;
 using MovieRecommendation.Application.DTOs.Users;
 using MovieRecommendation.Application.Repositories;
+using MovieRecommendation.Domain.Constants;
 using MovieRecommendation.Domain.Entities.Users;
 using MovieRecommendation.Domain.Enums;
 using MovieRecommendation.Domain.Models;
@@ -110,7 +111,7 @@ public class UserRepository : IUserRepository
             var bucket = (int)Math.Clamp(Math.Floor((double)r.Score * 2) - 1, 0, 9);
             distribution[bucket]++;
         }
-        stats.RatingDistribution = distribution;
+        stats.RatingDistribution = distribution.ToList();
 
         var firstOfMonth = new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1, 0, 0, 0, DateTimeKind.Utc);
         stats.RatingsThisMonth = ratings.Count(r => r.CreatedAt >= firstOfMonth);
@@ -132,9 +133,9 @@ public class UserRepository : IUserRepository
             switch (g.Status)
             {
                 case WatchlistStatus.PlanToWatch: counts.PlanToWatch = g.Count; break;
-                case WatchlistStatus.Watching:    counts.Watching    = g.Count; break;
-                case WatchlistStatus.Completed:   counts.Completed   = g.Count; break;
-                case WatchlistStatus.Dropped:     counts.Dropped     = g.Count; break;
+                case WatchlistStatus.Watching: counts.Watching = g.Count; break;
+                case WatchlistStatus.Completed: counts.Completed = g.Count; break;
+                case WatchlistStatus.Dropped: counts.Dropped = g.Count; break;
             }
         }
         stats.WatchlistCounts = counts;
@@ -176,14 +177,14 @@ public class UserRepository : IUserRepository
             var ids = genreCounts.Select(g => g.GenreId).ToList();
             var translations = await _dbContext.GenreTranslations
                 .AsNoTracking()
-                .Where(t => ids.Contains(t.GenreId) && (t.LanguageCode == lang || t.LanguageCode == "en"))
+                .Where(t => ids.Contains(t.GenreId) && (t.LanguageCode == lang || t.LanguageCode == LanguageCodes.English))
                 .ToListAsync(ct);
 
             stats.TopGenres = genreCounts
                 .Select(g =>
                 {
                     var inLang = translations.FirstOrDefault(t => t.GenreId == g.GenreId && t.LanguageCode == lang);
-                    var fallback = translations.FirstOrDefault(t => t.GenreId == g.GenreId && t.LanguageCode == "en");
+                    var fallback = translations.FirstOrDefault(t => t.GenreId == g.GenreId && t.LanguageCode == LanguageCodes.English);
                     return new TopGenreDto
                     {
                         Slug = g.Slug,
