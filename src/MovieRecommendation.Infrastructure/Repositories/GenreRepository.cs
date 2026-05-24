@@ -19,6 +19,7 @@ public class GenreRepository : BaseRepository<Genre, int>, IGenreRepository
     {
         return await DbContext.Genres
             .AsNoTracking()
+            .Where(g => !g.IsDeleted)
             .OrderBy(g => g.Slug)
             .ProjectTo<GenreDto>(MapperConfiguration, new { lang })
             .ToListAsync(cancellationToken);
@@ -60,7 +61,7 @@ public class GenreRepository : BaseRepository<Genre, int>, IGenreRepository
         var lowered = slugs.Select(s => s.ToLower()).ToList();
 
         var matches = await DbContext.Genres
-            .Where(g => lowered.Contains(g.Slug))
+            .Where(g => lowered.Contains(g.Slug) && !g.IsDeleted)
             .ToListAsync(cancellationToken);
 
         return matches.ToDictionary(g => g.Slug, g => g);
@@ -76,7 +77,7 @@ public class GenreRepository : BaseRepository<Genre, int>, IGenreRepository
         }
 
         var matches = await DbContext.Genres
-            .Where(g => ids.Contains(g.Id))
+            .Where(g => ids.Contains(g.Id) && !g.IsDeleted)
             .ToListAsync(cancellationToken);
 
         return matches.ToDictionary(g => g.Id, g => g);

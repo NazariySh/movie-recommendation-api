@@ -40,33 +40,24 @@ public class SemanticSearchMoviesQueryHandler
         {
             var scored = await _searchEngine.SemanticSearchAsync(q, query.Limit, ct);
 
-            var qualifying = scored
+            var qualifyingIds = scored
                 .Where(s => s.Score >= query.MinScore)
+                .Select(s => s.MovieId)
                 .ToList();
 
-            if (qualifying.Count == 0)
+            if (qualifyingIds.Count == 0)
             {
                 return new SemanticSearchMoviesResult([], q, 0);
             }
 
-            var ids = qualifying.Select(s => s.MovieId).ToList();
-            var movies = await _movieRepository.GetListItemsByIdsAsync(ids, query.Lang, ct);
+            var movies = await _movieRepository.GetListItemsByIdsAsync(qualifyingIds, query.Lang, ct);
 
-            var scoreById = qualifying.ToDictionary(s => s.MovieId, s => s.Score);
-            var orderById = ids
+            var orderById = qualifyingIds
                 .Select((id, idx) => (id, idx))
                 .ToDictionary(x => x.id, x => x.idx);
 
             var items = movies
                 .OrderBy(m => orderById[m.Id])
-                .Select(m => new SemanticSearchMovieItem(
-                    Id: m.Id,
-                    Title: m.Title,
-                    Overview: m.Overview,
-                    PosterUrl: m.PosterUrl,
-                    ReleaseYear: m.ReleaseYear,
-                    VoteAverage: m.AverageRating,
-                    SimilarityScore: scoreById[m.Id]))
                 .ToList();
 
             return new SemanticSearchMoviesResult(items, q, items.Count);

@@ -180,6 +180,18 @@ public class MovieRepository : BaseRepository<Movie>, IMovieRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public Task<Movie?> GetForAdminEditAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return DbContext.Movies
+            .AsNoTracking()
+            .AsSplitQuery()
+            .Include(x => x.Translations)
+            .Include(x => x.MovieGenres)
+            .Include(x => x.Seasons)
+            .Where(x => x.Id == id && !x.IsDeleted)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public Task<bool> KeyExistsAsync(string key, Guid? excludeId = null, CancellationToken cancellationToken = default)
     {
         var query = DbContext.Movies.Where(x => x.Key == key && !x.IsDeleted);
@@ -284,6 +296,35 @@ public class MovieRepository : BaseRepository<Movie>, IMovieRepository
             .OrderByDescending(m => m.OriginalTitle.ToLower().StartsWith(trimmed))
             .ThenByDescending(m => m.RatingsCount)
             .Take(limit)
+            .Select(m => new MovieSuggestionDto
+            {
+                Id = m.Id,
+                Key = m.Key,
+                Type = m.Type,
+                Title = m.Translations
+                    .Where(t => t.LanguageCode == lang || t.LanguageCode == FallbackLang)
+                    .OrderByDescending(t => t.LanguageCode == lang)
+                    .Select(t => t.Title)
+                    .FirstOrDefault() ?? m.OriginalTitle,
+                ReleaseYear = m.ReleaseDate.HasValue ? m.ReleaseDate.Value.Year : (int?)null,
+                PosterUrl = m.PosterUrl,
+            })
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<MovieSuggestionDto>> GetSuggestionsByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
+        string lang,
+        CancellationToken cancellationToken = default)
+    {
+        if (ids.Count == 0)
+        {
+            return [];
+        }
+
+        return await DbContext.Movies
+            .AsNoTracking()
+            .Where(m => ids.Contains(m.Id) && !m.IsDeleted)
             .Select(m => new MovieSuggestionDto
             {
                 Id = m.Id,

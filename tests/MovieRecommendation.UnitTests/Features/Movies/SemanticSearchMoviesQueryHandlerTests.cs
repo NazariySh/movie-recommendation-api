@@ -100,7 +100,7 @@ public class SemanticSearchMoviesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Should_PreserveSearchEngineOrder_And_CarrySimilarityScore()
+    public async Task Handle_Should_PreserveSearchEngineOrder()
     {
         var idA = Guid.NewGuid();
         var idB = Guid.NewGuid();
@@ -113,7 +113,7 @@ public class SemanticSearchMoviesQueryHandlerTests
                 new(idA, 0.88),
                 new(idC, 0.85),
             });
-        
+
         _movieRepositoryMock
             .Setup(r => r.GetListItemsByIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), "en", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MovieListItemDto>
@@ -128,8 +128,5 @@ public class SemanticSearchMoviesQueryHandlerTests
             CancellationToken.None);
 
         result.Items.Select(i => i.Title).Should().ContainInOrder("B", "A", "C");
-        result.Items[0].SimilarityScore.Should().Be(0.91);
-        result.Items[1].SimilarityScore.Should().Be(0.88);
-        result.Items[2].SimilarityScore.Should().Be(0.85);
     }
 }

@@ -19,4 +19,8 @@ public class UpdateArtistDto
     public string? KnownForDepartment { get; set; }
 
     public string? Biography { get; set; }
+
+    public int? TmdbId { get; set; }
+
+    public string? ImdbId { get; set; }
 }

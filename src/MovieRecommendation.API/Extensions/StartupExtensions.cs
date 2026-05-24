@@ -3,6 +3,7 @@ using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using MovieRecommendation.Domain.Settings;
+using MovieRecommendation.Infrastructure.Data.Seeding;
 
 namespace MovieRecommendation.API.Extensions;
 
@@ -67,5 +68,12 @@ public static class StartupExtensions
         });
 
         return services;
+    }
+
+    public static async Task SeedDataAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+        await seeder.SeedAsync();
     }
 }

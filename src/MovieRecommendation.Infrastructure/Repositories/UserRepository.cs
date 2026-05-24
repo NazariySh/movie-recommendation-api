@@ -25,6 +25,13 @@ public class UserRepository : IUserRepository
         _mapperConfiguration = mapperConfiguration;
     }
 
+    public Task<User?> GetTrackedIncludingDeletedAsync(Guid userId, CancellationToken ct = default)
+    {
+        return _dbContext.Users
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(u => u.Id == userId, ct);
+    }
+
     public async Task<TProjection?> GetByIdAsync<TProjection>(Guid userId, CancellationToken ct = default)
         where TProjection : class
     {
@@ -217,7 +224,7 @@ public class UserRepository : IUserRepository
             AdminPagingDefaults.MaxPageSize);
         var now = DateTimeOffset.UtcNow;
 
-        var users = _dbContext.Users.AsNoTracking().AsQueryable();
+        var users = _dbContext.Users.AsNoTracking().IgnoreQueryFilters().AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
@@ -310,6 +317,7 @@ public class UserRepository : IUserRepository
 
         var user = await _dbContext.Users
             .AsNoTracking()
+            .IgnoreQueryFilters()
             .Where(u => u.Id == userId)
             .Select(u => new
             {

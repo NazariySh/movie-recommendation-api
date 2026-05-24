@@ -2,8 +2,6 @@ namespace MovieRecommendation.Infrastructure.Data.Seeding.Constants;
 
 public static class SeedingConstants
 {
-    public const int MaxMoviesToSeed = 20000;
-    public const int MaxMovieLensUsers = 5000;
     public const int ProgressLogInterval = 100;
     public const int RatingsBatchSize = 1000;
     public const string DefaultDataDirectory = "ml-32m";

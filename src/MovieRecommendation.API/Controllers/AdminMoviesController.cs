@@ -6,6 +6,7 @@ using MovieRecommendation.Application.Features.Movies.Commands.CreateMovie;
 using MovieRecommendation.Application.Features.Movies.Commands.DeleteMovie;
 using MovieRecommendation.Application.Features.Movies.Commands.RegenerateEmbedding;
 using MovieRecommendation.Application.Features.Movies.Commands.UpdateMovie;
+using MovieRecommendation.Application.Features.Movies.Queries.GetAdminMovieById;
 using MovieRecommendation.Domain.Constants;
 
 namespace MovieRecommendation.API.Controllers;
@@ -17,6 +18,13 @@ public class AdminMoviesController : BaseController
 {
     public AdminMoviesController(IMediator mediator) : base(mediator)
     {
+    }
+
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken ct)
+    {
+        var dto = await Mediator.Send(new GetAdminMovieByIdQuery(id), ct);
+        return Ok(dto);
     }
 
     [HttpPost]

@@ -1,5 +1,6 @@
 using MovieRecommendation.Application.DTOs.Admin;
 using MovieRecommendation.Application.DTOs.Users;
+using MovieRecommendation.Domain.Entities.Users;
 using MovieRecommendation.Domain.Models;
 
 namespace MovieRecommendation.Application.Repositories;
@@ -20,4 +21,6 @@ public interface IUserRepository
     Task<PagedList<AdminUserListItemDto>> SearchAdminAsync(SearchAdminUsersDto query, CancellationToken ct = default);
 
     Task<AdminUserDetailDto?> GetAdminDetailAsync(Guid userId, CancellationToken ct = default);
+
+    Task<User?> GetTrackedIncludingDeletedAsync(Guid userId, CancellationToken ct = default);
 }

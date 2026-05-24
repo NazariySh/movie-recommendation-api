@@ -8,5 +8,6 @@ public interface IMovieLensRatingSeeder
         string ratingsPath,
         IReadOnlyList<MovieLensRecord> records,
         IReadOnlyDictionary<int, Guid> movieLensUserIdToDbUserId,
+        int maxRatingsPerUser,
         CancellationToken cancellationToken = default);
 }

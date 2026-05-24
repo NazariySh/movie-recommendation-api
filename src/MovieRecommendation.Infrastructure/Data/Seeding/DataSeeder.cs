@@ -53,11 +53,11 @@ public sealed class DataSeeder
         var records = _csvReader.Read(paths.MoviesPath, paths.LinksPath);
         _logger.LogInformation("Loaded {Count} MovieLens records from {Path}", records.Count, paths.MoviesPath);
 
-        await _movieSeeder.SeedAsync(records, SeedingConstants.MaxMoviesToSeed, cancellationToken);
+        await _movieSeeder.SeedAsync(records, _settings.MovieCount, cancellationToken);
 
-        var userMap = await _userSeeder.SeedAsync(SeedingConstants.MaxMovieLensUsers, cancellationToken);
+        var userMap = await _userSeeder.SeedAsync(_settings.MovieLensUserCount, cancellationToken);
 
-        await _ratingSeeder.SeedAsync(paths.RatingsPath, records, userMap, cancellationToken);
+        await _ratingSeeder.SeedAsync(paths.RatingsPath, records, userMap, _settings.MaxRatingsPerUser, cancellationToken);
     }
 
     private DataFiles? ResolveDataPaths()

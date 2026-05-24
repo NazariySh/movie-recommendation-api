@@ -35,7 +35,7 @@ public class WatchlistRepository : BaseRepository<WatchlistItem>, IWatchlistRepo
 
         var baseQuery = DbContext.WatchlistItems
             .AsNoTracking()
-            .Where(w => w.UserId == userId);
+            .Where(w => w.UserId == userId && !w.IsDeleted);
 
         if (query.Status is not null)
         {

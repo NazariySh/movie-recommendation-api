@@ -44,6 +44,8 @@ public class UpdateArtistCommandHandler : ICommandHandler<UpdateArtistCommand>
         artist.Gender = request.Model.Gender;
         artist.KnownForDepartment = request.Model.KnownForDepartment;
         artist.Biography = request.Model.Biography;
+        artist.TmdbId = request.Model.TmdbId;
+        artist.ImdbId = request.Model.ImdbId;
         artist.UpdatedAt = DateTime.UtcNow;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

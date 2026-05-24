@@ -11,7 +11,7 @@ public class UpdateReviewCommandValidator : AbstractValidator<UpdateReviewComman
 
         RuleFor(x => x.Model.Body)
             .NotEmpty()
-            .Length(1, 5000);
+            .Length(5, 5000);
 
         RuleFor(x => x.Model.Score)
             .InclusiveBetween(1m, 10m)

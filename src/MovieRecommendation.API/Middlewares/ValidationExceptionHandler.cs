@@ -46,9 +46,17 @@ internal sealed class ValidationExceptionHandler : IExceptionHandler
     private static Dictionary<string, string[]> GetValidationErrors(ValidationException exception)
     {
         return exception.Errors
-            .GroupBy(e => e.PropertyName)
+            .GroupBy(e => NormalizePropertyName(e.PropertyName))
             .ToDictionary(
                 g => g.Key,
                 g => g.Select(e => e.ErrorMessage).ToArray());
+    }
+
+    private static string NormalizePropertyName(string propertyName)
+    {
+        const string ModelPrefix = "Model.";
+        return propertyName.StartsWith(ModelPrefix, StringComparison.Ordinal)
+            ? propertyName[ModelPrefix.Length..]
+            : propertyName;
     }
 }

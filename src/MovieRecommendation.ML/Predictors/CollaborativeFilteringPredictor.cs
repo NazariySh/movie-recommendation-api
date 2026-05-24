@@ -18,6 +18,8 @@ public class CollaborativeFilteringPredictor
         _storage = storage;
     }
 
+    private const float NeutralScore = 5.5f;
+
     public float Predict(Guid userId, Guid movieId)
     {
         EnsureEngineLoaded();
@@ -30,6 +32,9 @@ public class CollaborativeFilteringPredictor
             UserId = userId.ToString(),
             MovieId = movieId.ToString()
         });
+
+        if (float.IsNaN(result.Score) || float.IsInfinity(result.Score))
+            return NeutralScore;
 
         return Math.Clamp(result.Score, 1.0f, 10.0f);
     }

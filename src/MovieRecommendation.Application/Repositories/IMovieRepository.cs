@@ -41,6 +41,8 @@ public interface IMovieRepository : IRepository<Movie>
 
     Task<Movie?> GetForEmbeddingAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<Movie?> GetForAdminEditAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<bool> KeyExistsAsync(string key, Guid? excludeId = null, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Guid>> GetTrendingIdsAsync(
@@ -63,6 +65,11 @@ public interface IMovieRepository : IRepository<Movie>
         string query,
         TitleType? type,
         int limit,
+        string lang,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<MovieSuggestionDto>> GetSuggestionsByIdsAsync(
+        IReadOnlyCollection<Guid> ids,
         string lang,
         CancellationToken cancellationToken = default);
 

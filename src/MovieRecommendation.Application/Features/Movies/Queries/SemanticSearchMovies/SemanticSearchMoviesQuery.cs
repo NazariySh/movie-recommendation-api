@@ -6,5 +6,5 @@ public record SemanticSearchMoviesQuery(
     string Query,
     string Lang = "en",
     int Limit = 20,
-    double MinScore = 0.70
+    double MinScore = 0.60
 ) : IQuery<SemanticSearchMoviesResult>;

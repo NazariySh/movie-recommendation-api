@@ -36,7 +36,7 @@ public class SearchController : BaseController
     public async Task<IActionResult> SemanticSearch(
         [FromQuery] string q,
         [FromQuery] int limit = 20,
-        [FromQuery] double minScore = 0.70,
+        [FromQuery] double minScore = 0.60,
         CancellationToken ct = default)
     {
         var lang = HttpContext.GetRequestLanguage();

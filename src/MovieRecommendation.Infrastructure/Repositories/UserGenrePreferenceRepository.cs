@@ -17,7 +17,7 @@ public class UserGenrePreferenceRepository : BaseRepository<UserGenrePreference>
     {
         return await DbContext.UserGenrePreferences
             .AsNoTracking()
-            .Where(p => p.UserId == userId)
+            .Where(p => p.UserId == userId && !p.IsDeleted)
             .OrderByDescending(p => p.Weight)
             .Select(p => p.GenreId)
             .ToListAsync(cancellationToken);
@@ -29,7 +29,7 @@ public class UserGenrePreferenceRepository : BaseRepository<UserGenrePreference>
             .AsNoTracking()
             .Include(p => p.Genre)
             .ThenInclude(g => g.Translations)
-            .Where(p => p.UserId == userId)
+            .Where(p => p.UserId == userId && !p.IsDeleted)
             .OrderByDescending(p => p.Weight)
             .ToListAsync(cancellationToken);
     }
@@ -39,17 +39,18 @@ public class UserGenrePreferenceRepository : BaseRepository<UserGenrePreference>
         IReadOnlyCollection<UserGenrePreference> preferences,
         CancellationToken cancellationToken = default)
     {
-        var existingGenrePreferences = await DbContext.UserGenrePreferences
+        var existing = await DbContext.UserGenrePreferences
             .Where(p => p.UserId == userId)
             .ToListAsync(cancellationToken);
 
-        existingGenrePreferences.Clear();
-
-        if (preferences.Count == 0)
+        if (existing.Count > 0)
         {
-            return;
+            DbContext.UserGenrePreferences.RemoveRange(existing);
         }
 
-        existingGenrePreferences.AddRange(preferences);
+        if (preferences.Count > 0)
+        {
+            await DbContext.UserGenrePreferences.AddRangeAsync(preferences, cancellationToken);
+        }
     }
 }

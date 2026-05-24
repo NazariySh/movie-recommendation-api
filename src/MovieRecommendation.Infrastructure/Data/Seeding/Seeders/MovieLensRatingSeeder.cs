@@ -34,6 +34,7 @@ public sealed class MovieLensRatingSeeder : IMovieLensRatingSeeder
         string ratingsPath,
         IReadOnlyList<MovieLensRecord> records,
         IReadOnlyDictionary<int, Guid> movieLensUserIdToDbUserId,
+        int maxRatingsPerUser,
         CancellationToken cancellationToken = default)
     {
         if (await _db.Ratings.AnyAsync(cancellationToken))
@@ -62,19 +63,22 @@ public sealed class MovieLensRatingSeeder : IMovieLensRatingSeeder
         }
 
         _logger.LogInformation(
-            "Seeding MovieLens ratings: {UserCount} users x {MovieCount} movies",
+            "Seeding MovieLens ratings: {UserCount} users x {MovieCount} movies (cap {Cap}/user)",
             movieLensUserIdToDbUserId.Count,
-            movieMap.Count);
+            movieMap.Count,
+            maxRatingsPerUser);
 
         var minUserId = movieLensUserIdToDbUserId.Keys.Min();
         var maxUserId = movieLensUserIdToDbUserId.Keys.Max();
         var now = DateTime.UtcNow;
+        var cap = Math.Max(1, maxRatingsPerUser);
 
         using var reader = new StreamReader(ratingsPath);
         using var csv = new CsvReader(reader, CsvConfiguration);
 
         var buffer = new List<MovieRating>(SeedingConstants.RatingsBatchSize);
         var dedup = new HashSet<(Guid UserId, Guid MovieId)>();
+        var perUserCount = new Dictionary<int, int>(movieLensUserIdToDbUserId.Count);
         var touched = new HashSet<Guid>();
         var inserted = 0;
         var rowsRead = 0L;
@@ -98,6 +102,13 @@ public sealed class MovieLensRatingSeeder : IMovieLensRatingSeeder
                 continue;
             }
 
+            // Per-user cap: skip once this MovieLens user has contributed enough ratings.
+            // Prevents super-raters (some users have 5000+ ratings) from dominating the matrix.
+            if (perUserCount.TryGetValue(row.UserId, out var current) && current >= cap)
+            {
+                continue;
+            }
+
             if (!movieMap.TryGetValue(row.MovieId, out var dbMovieId))
             {
                 continue;
@@ -117,6 +128,7 @@ public sealed class MovieLensRatingSeeder : IMovieLensRatingSeeder
                 UpdatedAt = now,
             });
             touched.Add(dbMovieId);
+            perUserCount[row.UserId] = current + 1;
 
             if (buffer.Count >= SeedingConstants.RatingsBatchSize)
             {
@@ -135,10 +147,13 @@ public sealed class MovieLensRatingSeeder : IMovieLensRatingSeeder
 
         await RecomputeAggregatesAsync(touched, cancellationToken);
 
+        var avgPerUser = perUserCount.Count > 0 ? (double)inserted / perUserCount.Count : 0;
         _logger.LogInformation(
-            "MovieLens ratings seeded: {Inserted} rows across {Touched} movies",
+            "MovieLens ratings seeded: {Inserted} rows across {Touched} movies ({UsersWithRatings} users, avg {AvgPerUser:F1}/user)",
             inserted,
-            touched.Count);
+            touched.Count,
+            perUserCount.Count,
+            avgPerUser);
     }
 
     private async Task<int> FlushAsync(List<MovieRating> buffer, CancellationToken cancellationToken)

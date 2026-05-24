@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using MovieRecommendation.Domain.Entities;
 using MovieRecommendation.Domain.Entities.Movies;
 using MovieRecommendation.Domain.Entities.Predictions;
 using MovieRecommendation.Domain.Entities.Reviews;
@@ -68,5 +69,29 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
         builder.Entity<IdentityUserLogin<Guid>>().ToTable("user_logins");
         builder.Entity<IdentityUserToken<Guid>>().ToTable("user_tokens");
         builder.Entity<IdentityRoleClaim<Guid>>().ToTable("role_claims");
+
+        ApplySoftDeleteFilters(builder);
+    }
+
+    private static void ApplySoftDeleteFilters(ModelBuilder builder)
+    {
+        foreach (var entityType in builder.Model.GetEntityTypes())
+        {
+            if (!typeof(ISoftDeletable).IsAssignableFrom(entityType.ClrType))
+            {
+                continue;
+            }
+
+            typeof(ApplicationDbContext)
+                .GetMethod(nameof(SetSoftDeleteFilter), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
+                .MakeGenericMethod(entityType.ClrType)
+                .Invoke(null, [builder]);
+        }
+    }
+
+    private static void SetSoftDeleteFilter<TEntity>(ModelBuilder builder)
+        where TEntity : class, ISoftDeletable
+    {
+        builder.Entity<TEntity>().HasQueryFilter(e => !e.IsDeleted);
     }
 }

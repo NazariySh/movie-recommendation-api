@@ -32,6 +32,10 @@ public class UpdateArtistCommandValidator : AbstractValidator<UpdateArtistComman
         RuleFor(x => x.Model.KnownForDepartment).MaximumLength(50)
             .When(x => x.Model.KnownForDepartment is not null);
 
+        RuleFor(x => x.Model.ImdbId)
+            .Matches(@"^nm\d+$").WithMessage("ImdbId must match pattern nm\\d+.")
+            .When(x => !string.IsNullOrWhiteSpace(x.Model.ImdbId));
+
         RuleFor(x => x.Model)
             .Must(m => !m.DateOfDeath.HasValue || !m.Birthday.HasValue || m.DateOfDeath > m.Birthday)
             .WithMessage("Date of death must be after birthday.");

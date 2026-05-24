@@ -46,7 +46,7 @@ public class DeleteMovieCommandHandlerTests : IDisposable
 
         await _handler.Handle(new DeleteMovieCommand(movie.Id), CancellationToken.None);
 
-        var reloaded = await _dbContext.Movies.SingleAsync(m => m.Id == movie.Id);
+        var reloaded = await _dbContext.Movies.IgnoreQueryFilters().SingleAsync(m => m.Id == movie.Id);
         reloaded.IsDeleted.Should().BeTrue();
         reloaded.UpdatedAt.Should().NotBeNull();
 

@@ -4,6 +4,7 @@ using MovieRecommendation.Application.Common.Constants;
 using MovieRecommendation.Application.DTOs.Search;
 using MovieRecommendation.Application.Features.Search.Queries.GetSearchSuggestions;
 using MovieRecommendation.Application.Interfaces;
+using MovieRecommendation.Application.Interfaces.ML;
 using MovieRecommendation.Application.Repositories;
 
 namespace MovieRecommendation.UnitTests.Features.Search;
@@ -12,6 +13,7 @@ public class GetSearchSuggestionsQueryHandlerTests
 {
     private readonly Mock<IMovieRepository> _movieRepositoryMock;
     private readonly Mock<IArtistRepository> _artistRepositoryMock;
+    private readonly Mock<ISearchEngine> _searchEngineMock;
     private readonly Mock<ICacheService> _cacheMock;
     private readonly GetSearchSuggestionsQueryHandler _handler;
 
@@ -19,10 +21,12 @@ public class GetSearchSuggestionsQueryHandlerTests
     {
         _movieRepositoryMock = new Mock<IMovieRepository>();
         _artistRepositoryMock = new Mock<IArtistRepository>();
+        _searchEngineMock = new Mock<ISearchEngine>();
         _cacheMock = new Mock<ICacheService>();
         _handler = new GetSearchSuggestionsQueryHandler(
             _movieRepositoryMock.Object,
             _artistRepositoryMock.Object,
+            _searchEngineMock.Object,
             _cacheMock.Object);
     }
 

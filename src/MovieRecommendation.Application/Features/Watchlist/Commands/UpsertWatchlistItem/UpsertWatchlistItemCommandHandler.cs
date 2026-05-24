@@ -51,6 +51,7 @@ public class UpsertWatchlistItemCommandHandler : ICommandHandler<UpsertWatchlist
         }
         else
         {
+            existing.IsDeleted = false;
             existing.Status = request.Model.Status;
             existing.Notes = request.Model.Notes;
             existing.UpdatedAt = now;

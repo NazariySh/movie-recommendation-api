@@ -50,6 +50,7 @@ public class UpdateMovieCommandHandler : ICommandHandler<UpdateMovieCommand>
 
         _mapper.Map(dto, movie);
         movie.Key = key;
+        movie.ReleaseDate = NormalizeToUtc(movie.ReleaseDate);
 
         movie.MovieGenres = dto.GenreIds.Distinct().Select(id => new MovieGenre { GenreId = id }).ToList();
         movie.Translations = dto.Translations.Select(t => new MovieTranslation
@@ -67,6 +68,14 @@ public class UpdateMovieCommandHandler : ICommandHandler<UpdateMovieCommand>
         InvalidateMovieCaches(movie.Id);
 
         return Unit.Value;
+    }
+
+    private static DateTime? NormalizeToUtc(DateTime? value)
+    {
+        if (!value.HasValue) return null;
+        return value.Value.Kind == DateTimeKind.Utc
+            ? value
+            : DateTime.SpecifyKind(value.Value, DateTimeKind.Utc);
     }
 
     private void InvalidateMovieCaches(Guid movieId)

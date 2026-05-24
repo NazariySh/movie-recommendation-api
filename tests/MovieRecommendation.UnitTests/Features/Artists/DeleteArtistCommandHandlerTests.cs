@@ -42,7 +42,7 @@ public class DeleteArtistCommandHandlerTests : IDisposable
 
         await _handler.Handle(new DeleteArtistCommand(artist.Id), CancellationToken.None);
 
-        var reloaded = await _dbContext.People.SingleAsync(p => p.Id == artist.Id);
+        var reloaded = await _dbContext.People.IgnoreQueryFilters().SingleAsync(p => p.Id == artist.Id);
         reloaded.IsDeleted.Should().BeTrue();
         reloaded.UpdatedAt.Should().NotBeNull();
     }
