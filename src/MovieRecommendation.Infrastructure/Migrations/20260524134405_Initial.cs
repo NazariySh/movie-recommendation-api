@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
 
@@ -633,7 +634,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         onDelete: ReferentialAction.Cascade);
                 });
 
-
             migrationBuilder.CreateTable(
                 name: "review_helpful_votes",
                 columns: table => new
@@ -935,6 +935,9 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 name: "role_claims");
 
             migrationBuilder.DropTable(
+                name: "seasons");
+
+            migrationBuilder.DropTable(
                 name: "survey_responses");
 
             migrationBuilder.DropTable(
@@ -968,16 +971,13 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 name: "roles");
 
             migrationBuilder.DropTable(
-                name: "seasons");
-
-            migrationBuilder.DropTable(
                 name: "genres");
 
             migrationBuilder.DropTable(
-                name: "users");
+                name: "movies");
 
             migrationBuilder.DropTable(
-                name: "movies");
+                name: "users");
         }
     }
 }

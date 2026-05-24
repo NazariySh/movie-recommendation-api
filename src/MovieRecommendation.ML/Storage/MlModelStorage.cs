@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.ML;
+using MovieRecommendation.Domain.Settings;
 
 namespace MovieRecommendation.ML.Storage;
 
@@ -8,15 +10,22 @@ public class MlModelStorage
     private readonly MLContext _mlContext;
     private readonly ILogger<MlModelStorage> _logger;
     private readonly string _modelsPath;
+    private readonly object _gate = new();
 
-    private ITransformer? _cachedModel;
-    private string? _cachedVersion;
+    private (string Version, ITransformer Model)? _cache;
 
-    public MlModelStorage(MLContext mlContext, ILogger<MlModelStorage> logger)
+    public MlModelStorage(
+        MLContext mlContext,
+        IOptions<RecommendationSettings> settings,
+        ILogger<MlModelStorage> logger)
     {
         _mlContext = mlContext;
         _logger = logger;
-        _modelsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "MLModels");
+
+        var configured = settings.Value.ModelStoragePath;
+        _modelsPath = Path.IsPathRooted(configured)
+            ? configured
+            : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, configured);
         Directory.CreateDirectory(_modelsPath);
     }
 
@@ -26,15 +35,20 @@ public class MlModelStorage
         _mlContext.Model.Save(model, schema, path);
         _logger.LogInformation("ML model saved: {Version} → {Path}", version, path);
 
-        _cachedModel = model;
-        _cachedVersion = version;
+        lock (_gate)
+        {
+            _cache = (version, model);
+        }
     }
 
     public ITransformer? LoadModel(string version)
     {
-        if (_cachedVersion == version && _cachedModel != null)
+        lock (_gate)
         {
-            return _cachedModel;
+            if (_cache is { } current && current.Version == version)
+            {
+                return current.Model;
+            }
         }
 
         string path = GetModelPath(version);
@@ -44,11 +58,15 @@ public class MlModelStorage
             return null;
         }
 
-        _cachedModel = _mlContext.Model.Load(path, out _);
-        _cachedVersion = version;
+        var loaded = _mlContext.Model.Load(path, out _);
+
+        lock (_gate)
+        {
+            _cache = (version, loaded);
+        }
 
         _logger.LogInformation("ML model loaded: {Version}", version);
-        return _cachedModel;
+        return loaded;
     }
 
     public string? GetLatestVersion()

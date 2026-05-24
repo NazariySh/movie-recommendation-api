@@ -9,8 +9,6 @@ namespace MovieRecommendation.Application.Features.Recommendations.Queries.GetCo
 
 public class GetColdStartQueryHandler : IQueryHandler<GetColdStartQuery, IReadOnlyList<MovieDto>>
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
-
     private readonly IRecommendationEngine _engine;
     private readonly IMovieRepository _movieRepository;
     private readonly ICacheService _cache;
@@ -31,7 +29,7 @@ public class GetColdStartQueryHandler : IQueryHandler<GetColdStartQuery, IReadOn
     public Task<IReadOnlyList<MovieDto>> Handle(GetColdStartQuery request, CancellationToken cancellationToken)
     {
         var key = RecommendationCacheKeys.ColdStart(request.UserId, request.Count, request.Lang);
-        return _cache.GetOrSetAsync(key, ComputeAsync, CacheTtl, cancellationToken);
+        return _cache.GetOrSetAsync(key, ComputeAsync, RecommendationCacheTtls.ColdStart, cancellationToken);
 
         async Task<IReadOnlyList<MovieDto>> ComputeAsync(CancellationToken ct)
         {

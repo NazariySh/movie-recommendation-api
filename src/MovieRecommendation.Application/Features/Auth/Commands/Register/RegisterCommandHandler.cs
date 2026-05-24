@@ -44,26 +44,42 @@ public class RegisterCommandHandler : ICommandHandler<RegisterCommand>
             throw new AlreadyExistsException($"Username '{request.Model.Username}' is already taken");
         }
 
-        await using var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken);
+        User user;
+        string verificationToken;
+
+        await using (var transaction = await _unitOfWork.BeginTransactionAsync(cancellationToken))
+        {
+            try
+            {
+                user = new User
+                {
+                    UserName = request.Model.Username,
+                    Email = request.Model.Email,
+                    PreferredLanguage = request.Model.PreferredLanguage,
+                    EmailConfirmed = false,
+                };
+
+                var result = await _userManager.CreateAsync(user, request.Model.Password);
+                result.EnsureSucceeded("Failed to create user");
+
+                var roleResult = await _userManager.AddToRoleAsync(user, request.RoleType.ToString());
+                roleResult.EnsureSucceeded($"Failed to add role '{request.RoleType}' to user");
+
+                verificationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+
+        _logger.LogInformation("Registered user {UserId} ({Username})", user.Id, user.UserName);
 
         try
         {
-            var user = new User
-            {
-                UserName = request.Model.Username,
-                Email = request.Model.Email,
-                PreferredLanguage = request.Model.PreferredLanguage,
-                EmailConfirmed = false,
-            };
-
-            var result = await _userManager.CreateAsync(user, request.Model.Password);
-            result.EnsureSucceeded("Failed to create user");
-
-            var roleResult = await _userManager.AddToRoleAsync(user, request.RoleType.ToString());
-            roleResult.EnsureSucceeded($"Failed to add role '{request.RoleType}' to user");
-
-            var verificationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-
             await _emailSender.SendVerificationAsync(
                 user.Email,
                 user.UserName,
@@ -71,18 +87,12 @@ public class RegisterCommandHandler : ICommandHandler<RegisterCommand>
                 verificationToken,
                 user.PreferredLanguage,
                 cancellationToken);
-
-            await transaction.CommitAsync(cancellationToken);
-
-            _logger.LogInformation("Registered user {UserId} ({Username})", user.Id, user.UserName);
-
-            return Unit.Value;
-
         }
-        catch
+        catch (Exception ex)
         {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
+            _logger.LogError(ex, "Verification email failed for {UserId}; user can resend later", user.Id);
         }
+
+        return Unit.Value;
     }
 }

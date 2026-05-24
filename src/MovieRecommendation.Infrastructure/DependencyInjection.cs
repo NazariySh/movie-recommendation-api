@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.Configure<GoogleAuthSettings>(configuration.GetSection(GoogleAuthSettings.SectionName));
         services.Configure<ClientSettings>(configuration.GetSection(ClientSettings.SectionName));
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+        services.Configure<OpenAiSettings>(configuration.GetSection(OpenAiSettings.SectionName));
 
         services.AddMemoryCache();
 

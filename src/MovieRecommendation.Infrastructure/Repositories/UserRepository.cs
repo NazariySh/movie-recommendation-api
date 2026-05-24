@@ -108,7 +108,7 @@ public class UserRepository : IUserRepository
         var distribution = new int[10];
         foreach (var r in ratings)
         {
-            var bucket = (int)Math.Clamp(Math.Floor((double)r.Score * 2) - 1, 0, 9);
+            var bucket = (int)Math.Clamp(Math.Floor((double)r.Score) - 1, 0, 9);
             distribution[bucket]++;
         }
         stats.RatingDistribution = distribution.ToList();

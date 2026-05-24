@@ -9,8 +9,6 @@ namespace MovieRecommendation.Application.Features.Search.Queries.GetSearchCount
 
 public class GetSearchCountsQueryHandler : IQueryHandler<GetSearchCountsQuery, SearchCountsDto>
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-
     private readonly IMovieRepository _movieRepository;
     private readonly IArtistRepository _artistRepository;
     private readonly ICacheService _cache;
@@ -35,7 +33,7 @@ public class GetSearchCountsQueryHandler : IQueryHandler<GetSearchCountsQuery, S
         }
 
         var key = SearchCacheKeys.Counts(request.Lang, trimmed);
-        return _cache.GetOrSetAsync(key, ct => ComputeAsync(trimmed, ct), CacheTtl, cancellationToken);
+        return _cache.GetOrSetAsync(key, ct => ComputeAsync(trimmed, ct), SearchCacheTtls.Counts, cancellationToken);
 
         async Task<SearchCountsDto> ComputeAsync(string q, CancellationToken ct)
         {

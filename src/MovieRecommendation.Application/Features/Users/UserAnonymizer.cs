@@ -15,7 +15,6 @@ public static class UserAnonymizer
         user.AvatarUrl = null;
         user.Bio = null;
         user.EmailConfirmed = false;
-        user.LockoutEnd = DateTimeOffset.MaxValue;
         user.IsDeleted = true;
         user.UpdatedAt = DateTime.UtcNow;
     }

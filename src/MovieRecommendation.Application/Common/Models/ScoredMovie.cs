@@ -3,5 +3,15 @@
 public record ScoredMovie(
     Guid MovieId,
     double Score,
-    string? Reason = null
+    RecommendationReason? Reason = null
 );
+
+public enum RecommendationReason
+{
+    ForYou,
+    Similar,
+    BecauseWatched,
+    PopularInGenres,
+    TopRated,
+    SemanticMatch,
+}

@@ -15,8 +15,7 @@ public class ChangePasswordCommandHandler : ICommandHandler<ChangePasswordComman
 
     public ChangePasswordCommandHandler(
         UserManager<User> userManager,
-        IRefreshTokenRepository refreshTokenRepository,
-        IUnitOfWork unitOfWork)
+        IRefreshTokenRepository refreshTokenRepository)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;

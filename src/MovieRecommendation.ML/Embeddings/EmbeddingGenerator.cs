@@ -8,7 +8,7 @@ namespace MovieRecommendation.ML.Embeddings;
 
 public class EmbeddingGenerator : IEmbeddingService
 {
-    public const string Model = "text-embedding-3-small";
+    private const string EmbeddingLang = "en";
 
     private readonly EmbeddingClient _client;
     private readonly ILogger<EmbeddingGenerator> _logger;
@@ -47,8 +47,6 @@ public class EmbeddingGenerator : IEmbeddingService
         var response = await _client.GenerateEmbeddingAsync(text);
         return new Vector(response.Value.ToFloats().ToArray());
     }
-
-    private const string EmbeddingLang = "en";
 
     private static string BuildMovieText(Movie movie)
     {

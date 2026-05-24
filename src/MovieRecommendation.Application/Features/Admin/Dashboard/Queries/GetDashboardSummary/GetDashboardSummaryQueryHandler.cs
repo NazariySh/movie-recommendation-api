@@ -8,8 +8,6 @@ namespace MovieRecommendation.Application.Features.Admin.Dashboard.Queries.GetDa
 
 public class GetDashboardSummaryQueryHandler : IQueryHandler<GetDashboardSummaryQuery, DashboardSummaryDto>
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(1);
-
     private readonly IAdminDashboardRepository _repository;
     private readonly ICacheService _cache;
 
@@ -24,7 +22,7 @@ public class GetDashboardSummaryQueryHandler : IQueryHandler<GetDashboardSummary
         return _cache.GetOrSetAsync(
             AdminCacheKeys.DashboardSummary,
             ct => _repository.GetSummaryAsync(ct),
-            CacheTtl,
+            DashboardWindows.SummaryCacheTtl,
             cancellationToken);
     }
 }

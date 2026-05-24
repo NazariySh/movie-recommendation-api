@@ -8,6 +8,7 @@ using MovieRecommendation.Application.Features.Auth.Commands.RefreshToken;
 using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
+using MovieRecommendation.Domain.Exceptions;
 using MovieRecommendation.UnitTests.Infrastructure;
 
 namespace MovieRecommendation.UnitTests.Features.Auth;
@@ -106,6 +107,22 @@ public class RefreshTokenCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_Should_ThrowEmailNotVerified_When_EmailUnconfirmed()
+    {
+        var userId = Guid.NewGuid();
+        var token = new RefreshToken { UserId = userId, Token = "tok", ExpiresAt = DateTime.UtcNow.AddDays(7) };
+        _cookieServiceMock.Setup(c => c.GetCookie(CookieName)).Returns("tok");
+        _refreshTokenRepositoryMock.Setup(r => r.FindByTokenAsync("tok", It.IsAny<CancellationToken>())).ReturnsAsync(token);
+        _userManagerMock.Setup(m => m.FindByIdAsync(userId.ToString()))
+            .ReturnsAsync(new User { Id = userId, UserName = "u", Email = "u@x.com", EmailConfirmed = false });
+
+        var act = () => _handler.Handle(new RefreshTokenCommand(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<EmailNotVerifiedException>();
+        _tokenProviderMock.Verify(t => t.GenerateAccessToken(It.IsAny<User>(), It.IsAny<IEnumerable<string>>()), Times.Never);
+    }
+
+    [Fact]
     public async Task Handle_Should_ThrowUnauthorized_When_UserIsSoftDeleted()
     {
         var userId = Guid.NewGuid();
@@ -136,6 +153,7 @@ public class RefreshTokenCommandHandlerTests
             UserName = "u",
             Email = "u@x.com",
             PreferredLanguage = "en",
+            EmailConfirmed = true,
         };
         var newExpiry = DateTime.UtcNow.AddDays(7);
 

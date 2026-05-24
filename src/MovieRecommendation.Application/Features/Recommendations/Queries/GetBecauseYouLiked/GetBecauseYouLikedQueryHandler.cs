@@ -9,8 +9,6 @@ namespace MovieRecommendation.Application.Features.Recommendations.Queries.GetBe
 
 public class GetBecauseYouLikedQueryHandler : IQueryHandler<GetBecauseYouLikedQuery, IReadOnlyList<MovieDto>>
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(6);
-
     private readonly IRecommendationEngine _engine;
     private readonly IMovieRepository _movieRepository;
     private readonly ICacheService _cache;
@@ -28,7 +26,7 @@ public class GetBecauseYouLikedQueryHandler : IQueryHandler<GetBecauseYouLikedQu
     public Task<IReadOnlyList<MovieDto>> Handle(GetBecauseYouLikedQuery request, CancellationToken cancellationToken)
     {
         var key = RecommendationCacheKeys.Because(request.MovieId, request.CurrentUserId, request.Count, request.Lang);
-        return _cache.GetOrSetAsync(key, ComputeAsync, CacheTtl, cancellationToken);
+        return _cache.GetOrSetAsync(key, ComputeAsync, RecommendationCacheTtls.Because, cancellationToken);
 
         async Task<IReadOnlyList<MovieDto>> ComputeAsync(CancellationToken ct)
         {

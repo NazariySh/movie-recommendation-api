@@ -16,17 +16,20 @@ public class HybridRecommender : IRecommendationEngine
     private readonly ApplicationDbContext _db;
     private readonly VectorSimilarityService _vectorService;
     private readonly ColdStartRecommender _coldStart;
+    private readonly MmrReRanker _mmr;
     private readonly RecommendationSettings _settings;
 
     public HybridRecommender(
         ApplicationDbContext db,
         VectorSimilarityService vectorService,
         ColdStartRecommender coldStart,
+        MmrReRanker mmr,
         IOptions<RecommendationSettings> settings)
     {
         _db = db;
         _vectorService = vectorService;
         _coldStart = coldStart;
+        _mmr = mmr;
         _settings = settings.Value;
     }
 
@@ -38,27 +41,12 @@ public class HybridRecommender : IRecommendationEngine
 
         if (ratingsCount < _settings.ColdStartRatingThreshold)
         {
-            var genreIds = await _db.UserGenrePreferences
-                .Where(g => g.UserId == userId)
-                .Select(g => g.GenreId)
-                .ToListAsync(ct);
-
-            return await _coldStart
-                .GetColdStartRecommendationsAsync(genreIds, limit, ct);
+            return await ColdStartFallbackAsync(userId, limit, ct);
         }
 
         var tasteVector = await BuildTasteVectorAsync(userId, ct);
 
-        var excludedMovieIds = await _db.Ratings
-            .Where(r => r.UserId == userId)
-            .Select(r => r.MovieId)
-            .Union(_db.WatchlistItems
-                .Where(w => w.UserId == userId
-                    && (w.Status == WatchlistStatus.Completed || w.Status == WatchlistStatus.Dropped))
-                .Select(w => w.MovieId))
-            .ToListAsync(ct);
-
-        var excludedSet = excludedMovieIds.ToHashSet();
+        var excludedSet = await GetUserExclusionsAsync(userId, ct);
 
         var cfPredictions = await _db.MlPredictions
             .Where(p => p.UserId == userId && !excludedSet.Contains(p.MovieId))
@@ -69,11 +57,7 @@ public class HybridRecommender : IRecommendationEngine
 
         if (cfPredictions.Count == 0)
         {
-            var genreIds = await _db.UserGenrePreferences
-                .Where(g => g.UserId == userId)
-                .Select(g => g.GenreId)
-                .ToListAsync(ct);
-            return await _coldStart.GetColdStartRecommendationsAsync(genreIds, limit, ct);
+            return await ColdStartFallbackAsync(userId, limit, ct);
         }
 
         var candidateIds = cfPredictions.Select(p => p.MovieId).ToList();
@@ -110,7 +94,7 @@ public class HybridRecommender : IRecommendationEngine
             .Take(limit * 3)
             .ToList();
 
-        return ApplyMmrReRank(scored, limit, "Recommended for you");
+        return _mmr.ReRank(scored, limit, _settings.MmrLambda, RecommendationReason.ForYou);
     }
 
     public async Task<List<ScoredMovie>> GetSimilarMoviesAsync(
@@ -145,7 +129,7 @@ public class HybridRecommender : IRecommendationEngine
                 n.Embedding))
             .ToList();
 
-        return ApplyMmrReRank(candidates, limit, "Similar movie");
+        return _mmr.ReRank(candidates, limit, _settings.MmrLambda, RecommendationReason.Similar);
     }
 
     public async Task<List<ScoredMovie>> GetBecauseYouWatchedAsync(
@@ -161,16 +145,7 @@ public class HybridRecommender : IRecommendationEngine
             return [];
         }
 
-        var excludedMovieIds = await _db.Ratings
-            .Where(r => r.UserId == userId)
-            .Select(r => r.MovieId)
-            .Union(_db.WatchlistItems
-                .Where(w => w.UserId == userId
-                    && (w.Status == WatchlistStatus.Completed || w.Status == WatchlistStatus.Dropped))
-                .Select(w => w.MovieId))
-            .ToListAsync(ct);
-
-        var excluded = excludedMovieIds.ToHashSet();
+        var excluded = await GetUserExclusionsAsync(userId, ct);
         excluded.Add(sourceMovieId);
 
         var nearest = await _db.Movies
@@ -208,31 +183,55 @@ public class HybridRecommender : IRecommendationEngine
             .Take(limit * 3)
             .ToList();
 
-        return ApplyMmrReRank(candidates, limit, "Because you watched");
+        return _mmr.ReRank(candidates, limit, _settings.MmrLambda, RecommendationReason.BecauseWatched);
     }
 
     public async Task<List<ScoredMovie>> GetColdStartRecommendationsAsync(
         IEnumerable<int> genreIds, int limit = 20, CancellationToken ct = default) =>
         await _coldStart.GetColdStartRecommendationsAsync(genreIds, limit, ct);
 
+    private async Task<List<ScoredMovie>> ColdStartFallbackAsync(Guid userId, int limit, CancellationToken ct)
+    {
+        var genreIds = await _db.UserGenrePreferences
+            .Where(g => g.UserId == userId)
+            .Select(g => g.GenreId)
+            .ToListAsync(ct);
+
+        return await _coldStart.GetColdStartRecommendationsAsync(genreIds, limit, ct);
+    }
+
+    private async Task<HashSet<Guid>> GetUserExclusionsAsync(Guid userId, CancellationToken ct)
+    {
+        var excludedMovieIds = await _db.Ratings
+            .Where(r => r.UserId == userId)
+            .Select(r => r.MovieId)
+            .Union(_db.WatchlistItems
+                .Where(w => w.UserId == userId
+                    && (w.Status == WatchlistStatus.Completed || w.Status == WatchlistStatus.Dropped))
+                .Select(w => w.MovieId))
+            .ToListAsync(ct);
+
+        return excludedMovieIds.ToHashSet();
+    }
+
     private async Task<Vector> BuildTasteVectorAsync(Guid userId, CancellationToken ct)
     {
         var likedThreshold = (decimal)_settings.LikedThreshold;
         var dislikedThreshold = (decimal)_settings.DislikedThreshold;
 
-        var liked = await _db.Ratings
-            .Where(r => r.UserId == userId && r.Score >= likedThreshold)
-            .Include(r => r.Movie)
-            .Where(r => r.Movie.Embedding != null)
-            .Select(r => r.Movie.Embedding!)
+        var bucketed = await _db.Ratings
+            .Where(r => r.UserId == userId
+                && (r.Score >= likedThreshold || r.Score <= dislikedThreshold)
+                && r.Movie.Embedding != null)
+            .Select(r => new
+            {
+                IsLiked = r.Score >= likedThreshold,
+                Embedding = r.Movie.Embedding!,
+            })
             .ToListAsync(ct);
 
-        var disliked = await _db.Ratings
-            .Where(r => r.UserId == userId && r.Score <= dislikedThreshold)
-            .Include(r => r.Movie)
-            .Where(r => r.Movie.Embedding != null)
-            .Select(r => r.Movie.Embedding!)
-            .ToListAsync(ct);
+        var liked = bucketed.Where(x => x.IsLiked).Select(x => x.Embedding).ToList();
+        var disliked = bucketed.Where(x => !x.IsLiked).Select(x => x.Embedding).ToList();
 
         if (liked.Count == 0)
         {
@@ -266,60 +265,4 @@ public class HybridRecommender : IRecommendationEngine
 
     private static double NormalizeCosineDistance(double distance) =>
         Math.Clamp(1.0 - distance / 2.0, 0.0, 1.0);
-
-    private List<ScoredMovie> ApplyMmrReRank(
-        List<ScoredCandidate> candidates, int limit, string reason)
-    {
-        if (candidates.Count <= limit)
-        {
-            return candidates
-                .Select(c => new ScoredMovie(c.MovieId, c.Score, reason))
-                .ToList();
-        }
-
-        var lambda = _settings.MmrLambda;
-        var picked = new List<ScoredCandidate>(limit);
-        var pool = new List<ScoredCandidate>(candidates);
-
-        picked.Add(pool[0]);
-        pool.RemoveAt(0);
-
-        while (picked.Count < limit && pool.Count > 0)
-        {
-            var bestIdx = 0;
-            var bestScore = double.NegativeInfinity;
-
-            for (int i = 0; i < pool.Count; i++)
-            {
-                var c = pool[i];
-                var maxSim = 0.0;
-
-                if (c.Embedding is not null)
-                {
-                    foreach (var p in picked)
-                    {
-                        if (p.Embedding is null) continue;
-                        var sim = _vectorService.CosineSimilarity(c.Embedding, p.Embedding);
-                        if (sim > maxSim) maxSim = sim;
-                    }
-                }
-
-                var mmr = lambda * c.Score - (1 - lambda) * maxSim;
-                if (mmr > bestScore)
-                {
-                    bestScore = mmr;
-                    bestIdx = i;
-                }
-            }
-
-            picked.Add(pool[bestIdx]);
-            pool.RemoveAt(bestIdx);
-        }
-
-        return picked
-            .Select(c => new ScoredMovie(c.MovieId, c.Score, reason))
-            .ToList();
-    }
-
-    private sealed record ScoredCandidate(Guid MovieId, double Score, Vector? Embedding);
 }

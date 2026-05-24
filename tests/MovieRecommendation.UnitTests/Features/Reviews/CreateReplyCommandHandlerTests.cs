@@ -85,8 +85,6 @@ public class CreateReplyCommandHandlerTests : IDisposable
         _dbContext.MovieReviews.Add(parent);
         await _dbContext.SaveChangesAsync();
 
-        // Even if the DTO contains a score, the handler should null it out
-        // (defence in depth — CreateReplyCommandValidator already rejects it).
         var dto = new CreateReplyDto
         {
             Body = "Thanks for the recommendation!",

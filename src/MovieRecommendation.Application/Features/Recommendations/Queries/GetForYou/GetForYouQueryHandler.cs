@@ -9,8 +9,6 @@ namespace MovieRecommendation.Application.Features.Recommendations.Queries.GetFo
 
 public class GetForYouQueryHandler : IQueryHandler<GetForYouQuery, IReadOnlyList<MovieDto>>
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(1);
-
     private readonly IRecommendationEngine _engine;
     private readonly IMovieRepository _movieRepository;
     private readonly ICacheService _cache;
@@ -28,7 +26,7 @@ public class GetForYouQueryHandler : IQueryHandler<GetForYouQuery, IReadOnlyList
     public Task<IReadOnlyList<MovieDto>> Handle(GetForYouQuery request, CancellationToken cancellationToken)
     {
         var key = RecommendationCacheKeys.ForYou(request.UserId, request.Count, request.Lang);
-        return _cache.GetOrSetAsync(key, ComputeAsync, CacheTtl, cancellationToken);
+        return _cache.GetOrSetAsync(key, ComputeAsync, RecommendationCacheTtls.ForYou, cancellationToken);
 
         async Task<IReadOnlyList<MovieDto>> ComputeAsync(CancellationToken ct)
         {

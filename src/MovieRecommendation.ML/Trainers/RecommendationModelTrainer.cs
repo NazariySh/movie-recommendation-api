@@ -1,6 +1,8 @@
 ﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Microsoft.ML;
 using Microsoft.ML.Trainers;
+using MovieRecommendation.Domain.Settings;
 using MovieRecommendation.ML.Models;
 using MovieRecommendation.ML.Storage;
 
@@ -10,15 +12,18 @@ public class RecommendationModelTrainer
 {
     private readonly MLContext _mlContext;
     private readonly MlModelStorage _storage;
+    private readonly RecommendationSettings _settings;
     private readonly ILogger<RecommendationModelTrainer> _logger;
 
     public RecommendationModelTrainer(
         MLContext mlContext,
         MlModelStorage storage,
+        IOptions<RecommendationSettings> settings,
         ILogger<RecommendationModelTrainer> logger)
     {
         _mlContext = mlContext;
         _storage = storage;
+        _settings = settings.Value;
         _logger = logger;
     }
 
@@ -45,11 +50,11 @@ public class RecommendationModelTrainer
                     MatrixColumnIndexColumnName = "UserIdEncoded",
                     MatrixRowIndexColumnName = "MovieIdEncoded",
                     LabelColumnName = "Label",
-                    NumberOfIterations = 20,
-                    ApproximationRank = 100,
-                    LearningRate = 0.01,
-                    Lambda = 0.025,
-                    Quiet = false
+                    NumberOfIterations = _settings.MatrixFactorizationIterations,
+                    ApproximationRank = _settings.MatrixFactorizationRank,
+                    LearningRate = _settings.MatrixFactorizationLearningRate,
+                    Lambda = _settings.MatrixFactorizationLambda,
+                    Quiet = false,
                 }));
 
         var model = await Task.Run(() => pipeline.Fit(split.TrainSet), ct);

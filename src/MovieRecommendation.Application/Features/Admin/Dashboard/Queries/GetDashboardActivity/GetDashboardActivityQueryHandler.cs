@@ -8,8 +8,6 @@ namespace MovieRecommendation.Application.Features.Admin.Dashboard.Queries.GetDa
 
 public class GetDashboardActivityQueryHandler : IQueryHandler<GetDashboardActivityQuery, DashboardActivityDto>
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-
     private readonly IAdminDashboardRepository _repository;
     private readonly ICacheService _cache;
 
@@ -25,12 +23,10 @@ public class GetDashboardActivityQueryHandler : IQueryHandler<GetDashboardActivi
             ? DashboardWindows.ActivityDaysDefault
             : Math.Min(request.Days, DashboardWindows.ActivityDaysMax);
 
-        var cacheKey = $"{AdminCacheKeys.DashboardActivityPrefix}{days}";
-
         return _cache.GetOrSetAsync(
-            cacheKey,
+            AdminCacheKeys.DashboardActivity(days),
             ct => _repository.GetActivityAsync(days, ct),
-            CacheTtl,
+            DashboardWindows.ActivityCacheTtl,
             cancellationToken);
     }
 }

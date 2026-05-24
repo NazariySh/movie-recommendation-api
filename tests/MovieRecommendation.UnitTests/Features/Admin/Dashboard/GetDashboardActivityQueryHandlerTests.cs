@@ -63,6 +63,6 @@ public class GetDashboardActivityQueryHandlerTests
 
         await _handler.Handle(new GetDashboardActivityQuery(14), CancellationToken.None);
 
-        capturedKey.Should().Be($"{AdminCacheKeys.DashboardActivityPrefix}14");
+        capturedKey.Should().Be(AdminCacheKeys.DashboardActivity(14));
     }
 }

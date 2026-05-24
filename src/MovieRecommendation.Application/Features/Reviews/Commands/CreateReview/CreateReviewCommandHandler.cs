@@ -54,6 +54,7 @@ public class CreateReviewCommandHandler : ICommandHandler<CreateReviewCommand, M
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _cache.RemoveByPrefix(ReviewCacheKeys.ForMovie(request.MovieId));
+        _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(request.UserId));
 
         var page = await _reviewRepository.GetForMovieAsync(
             request.MovieId,

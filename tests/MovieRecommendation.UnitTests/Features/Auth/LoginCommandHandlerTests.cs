@@ -10,6 +10,7 @@ using MovieRecommendation.Application.Features.Auth.Commands.RefreshToken;
 using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
+using MovieRecommendation.Domain.Exceptions;
 using MovieRecommendation.UnitTests.Infrastructure;
 
 namespace MovieRecommendation.UnitTests.Features.Auth;
@@ -68,7 +69,7 @@ public class LoginCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Should_ThrowUnauthorized_When_LockedOut()
+    public async Task Handle_Should_ThrowLocked_When_LockedOut()
     {
         var user = new User { Id = Guid.NewGuid(), UserName = "u", Email = "u@x.com" };
         _userManagerMock.Setup(m => m.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
@@ -76,7 +77,27 @@ public class LoginCommandHandlerTests
 
         var act = () => _handler.Handle(NewCommand(), CancellationToken.None);
 
-        await act.Should().ThrowAsync<UnauthorizedAccessException>().WithMessage("*locked*");
+        await act.Should().ThrowAsync<LockedException>().WithMessage("*locked*");
+    }
+
+    [Fact]
+    public async Task Handle_Should_ThrowEmailNotVerified_When_EmailUnconfirmed()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            UserName = "u",
+            Email = "u@x.com",
+            EmailConfirmed = false,
+        };
+        _userManagerMock.Setup(m => m.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.IsLockedOutAsync(user)).ReturnsAsync(false);
+        _userManagerMock.Setup(m => m.CheckPasswordAsync(user, It.IsAny<string>())).ReturnsAsync(true);
+
+        var act = () => _handler.Handle(NewCommand(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<EmailNotVerifiedException>();
+        _tokenProviderMock.Verify(t => t.GenerateAccessToken(It.IsAny<User>(), It.IsAny<IEnumerable<string>>()), Times.Never);
     }
 
     [Fact]
@@ -104,6 +125,7 @@ public class LoginCommandHandlerTests
             UserName = "u",
             Email = "u@x.com",
             PreferredLanguage = "en",
+            EmailConfirmed = true,
         };
         _userManagerMock.Setup(m => m.FindByEmailAsync(It.IsAny<string>())).ReturnsAsync(user);
         _userManagerMock.Setup(m => m.IsLockedOutAsync(user)).ReturnsAsync(false);

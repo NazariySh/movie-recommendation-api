@@ -38,6 +38,7 @@ public class AuthController : BaseController
     }
 
     [HttpPost("verify-email")]
+    [EnableRateLimiting("auth-forgot")]
     public async Task<IActionResult> VerifyEmail(VerifyEmailRequestDto request, CancellationToken ct)
     {
         await Mediator.Send(new VerifyEmailCommand(request), ct);
@@ -93,6 +94,7 @@ public class AuthController : BaseController
     }
 
     [HttpPost("reset-password")]
+    [EnableRateLimiting("auth-forgot")]
     public async Task<IActionResult> ResetPassword(ResetPasswordRequestDto request, CancellationToken ct)
     {
         await Mediator.Send(new ResetPasswordCommand(request), ct);

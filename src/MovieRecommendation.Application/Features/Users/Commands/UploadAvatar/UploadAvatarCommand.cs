@@ -7,5 +7,4 @@ public record UploadAvatarCommand(
     Guid UserId,
     Stream Content,
     string ContentType,
-    long Length,
-    string FileName) : ICommand<UserProfileDto>;
+    long Length) : ICommand<UserProfileDto>;

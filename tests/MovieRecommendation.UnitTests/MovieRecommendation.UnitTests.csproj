@@ -28,6 +28,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\MovieRecommendation.Application\MovieRecommendation.Application.csproj" />
     <ProjectReference Include="..\..\src\MovieRecommendation.Infrastructure\MovieRecommendation.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\MovieRecommendation.ML\MovieRecommendation.ML.csproj" />
   </ItemGroup>
 
   <ItemGroup>

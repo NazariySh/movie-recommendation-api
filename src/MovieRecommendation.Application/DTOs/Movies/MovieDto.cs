@@ -1,3 +1,4 @@
+using MovieRecommendation.Application.Common.Models;
 using MovieRecommendation.Domain.Enums;
 
 namespace MovieRecommendation.Application.DTOs.Movies;
@@ -36,8 +37,5 @@ public class MovieDto
 
     public IReadOnlyList<string> Genres { get; set; } = [];
 
-    // Optional context attached by recommendation handlers ("Recommended for you",
-    // "Because you watched", "Top rated"…) so the UI can surface a why-tooltip.
-    // Null for plain catalogue / search responses.
-    public string? RecommendationReason { get; set; }
+    public RecommendationReason? RecommendationReason { get; set; }
 }

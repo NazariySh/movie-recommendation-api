@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using MovieRecommendation.Application.Abstractions.Messaging;
+using MovieRecommendation.Application.Common.Constants;
+using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
 using MovieRecommendation.Domain.Exceptions;
@@ -12,23 +14,28 @@ public class DisableUserCommandHandler : ICommandHandler<DisableUserCommand>
 {
     private readonly UserManager<User> _userManager;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly ICacheService _cache;
     private readonly ILogger<DisableUserCommandHandler> _logger;
 
     public DisableUserCommandHandler(
         UserManager<User> userManager,
         IRefreshTokenRepository refreshTokenRepository,
-        IUnitOfWork unitOfWork,
+        ICacheService cache,
         ILogger<DisableUserCommandHandler> logger)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;
-        _unitOfWork = unitOfWork;
+        _cache = cache;
         _logger = logger;
     }
 
     public async Task<Unit> Handle(DisableUserCommand request, CancellationToken cancellationToken)
     {
+        if (request.ActorUserId == request.UserId)
+        {
+            throw new ForbiddenException("Admins cannot disable themselves.");
+        }
+
         var user = await _userManager.FindByIdAsync(request.UserId.ToString())
             ?? throw new NotFoundException($"User {request.UserId} not found.");
 
@@ -43,9 +50,14 @@ public class DisableUserCommandHandler : ICommandHandler<DisableUserCommand>
         }
 
         await _refreshTokenRepository.RevokeAllForUserAsync(user.Id, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Disabled user {UserId} (reason: {Reason})", user.Id, request.Reason ?? "n/a");
+        _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(user.Id));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(user.Id));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.ColdStartFor(user.Id));
+
+        _logger.LogInformation(
+            "Actor {ActorUserId} disabled user {UserId} (reason: {Reason})",
+            request.ActorUserId, user.Id, request.Reason ?? "n/a");
 
         return Unit.Value;
     }

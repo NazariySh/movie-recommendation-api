@@ -14,18 +14,15 @@ public class ChangePasswordCommandHandlerTests
 {
     private readonly Mock<UserManager<User>> _userManagerMock;
     private readonly Mock<IRefreshTokenRepository> _refreshTokenRepositoryMock;
-    private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly ChangePasswordCommandHandler _handler;
 
     public ChangePasswordCommandHandlerTests()
     {
         _userManagerMock = UserManagerMockFactory.Create();
         _refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
-        _unitOfWorkMock = new Mock<IUnitOfWork>();
         _handler = new ChangePasswordCommandHandler(
             _userManagerMock.Object,
-            _refreshTokenRepositoryMock.Object,
-            _unitOfWorkMock.Object);
+            _refreshTokenRepositoryMock.Object);
     }
 
     [Fact]

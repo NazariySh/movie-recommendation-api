@@ -2,7 +2,10 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using MovieRecommendation.Application.Abstractions.Messaging;
+using MovieRecommendation.Application.Common.Constants;
+using MovieRecommendation.Application.Common.Extensions;
 using MovieRecommendation.Application.Features.Users;
+using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
 using MovieRecommendation.Domain.Exceptions;
@@ -13,23 +16,28 @@ public class AdminDeleteUserCommandHandler : ICommandHandler<AdminDeleteUserComm
 {
     private readonly UserManager<User> _userManager;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
-    private readonly IUnitOfWork _unitOfWork;
+    private readonly ICacheService _cache;
     private readonly ILogger<AdminDeleteUserCommandHandler> _logger;
 
     public AdminDeleteUserCommandHandler(
         UserManager<User> userManager,
         IRefreshTokenRepository refreshTokenRepository,
-        IUnitOfWork unitOfWork,
+        ICacheService cache,
         ILogger<AdminDeleteUserCommandHandler> logger)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;
-        _unitOfWork = unitOfWork;
+        _cache = cache;
         _logger = logger;
     }
 
     public async Task<Unit> Handle(AdminDeleteUserCommand request, CancellationToken cancellationToken)
     {
+        if (request.ActorUserId == request.UserId)
+        {
+            throw new ForbiddenException("Admins cannot delete themselves. Use the profile delete endpoint instead.");
+        }
+
         var user = await _userManager.FindByIdAsync(request.UserId.ToString())
             ?? throw new NotFoundException($"User {request.UserId} not found.");
 
@@ -41,18 +49,16 @@ public class AdminDeleteUserCommandHandler : ICommandHandler<AdminDeleteUserComm
         UserAnonymizer.Anonymize(user);
 
         var result = await _userManager.UpdateAsync(user);
-        if (!result.Succeeded)
-        {
-            throw new InvalidOperationException(
-                $"Failed to anonymize user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-        }
+        result.EnsureSucceeded("Failed to anonymize user");
 
         await _refreshTokenRepository.RevokeAllForUserAsync(user.Id, cancellationToken);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Anonymized user {UserId}", user.Id);
+        _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(user.Id));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(user.Id));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.ColdStartFor(user.Id));
+
+        _logger.LogInformation("Actor {ActorUserId} anonymized user {UserId}", request.ActorUserId, user.Id);
 
         return Unit.Value;
     }
-
 }

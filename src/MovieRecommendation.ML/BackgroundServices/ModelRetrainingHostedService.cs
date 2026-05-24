@@ -1,24 +1,26 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MovieRecommendation.Application.Interfaces.ML;
 using MovieRecommendation.Application.Repositories;
+using MovieRecommendation.Domain.Settings;
 
 namespace MovieRecommendation.ML.BackgroundServices;
 
 public class ModelRetrainingHostedService : BackgroundService
 {
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly RecommendationSettings _settings;
     private readonly ILogger<ModelRetrainingHostedService> _logger;
-
-    private static readonly TimeSpan RetrainingInterval = TimeSpan.FromDays(7);
-    private static readonly TimeSpan InitialTrainingDelay = TimeSpan.FromSeconds(15);
 
     public ModelRetrainingHostedService(
         IServiceScopeFactory scopeFactory,
+        IOptions<RecommendationSettings> settings,
         ILogger<ModelRetrainingHostedService> logger)
     {
         _scopeFactory = scopeFactory;
+        _settings = settings.Value;
         _logger = logger;
     }
 
@@ -28,11 +30,13 @@ public class ModelRetrainingHostedService : BackgroundService
 
         await EnsureInitialModelAsync(ct);
 
+        var interval = TimeSpan.FromDays(Math.Max(1, _settings.RetrainingIntervalDays));
+
         while (!ct.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(RetrainingInterval, ct);
+                await Task.Delay(interval, ct);
             }
             catch (OperationCanceledException)
             {
@@ -44,7 +48,7 @@ public class ModelRetrainingHostedService : BackgroundService
                 using var scope = _scopeFactory.CreateScope();
                 var orchestrator = scope.ServiceProvider
                     .GetRequiredService<IModelRetrainingOrchestrator>();
-                await orchestrator.RunAsync(ct);
+                await orchestrator.RunAsync(cancellationToken: ct);
             }
             catch (InvalidOperationException ex)
             {
@@ -61,7 +65,7 @@ public class ModelRetrainingHostedService : BackgroundService
     {
         try
         {
-            await Task.Delay(InitialTrainingDelay, ct);
+            await Task.Delay(TimeSpan.FromSeconds(Math.Max(0, _settings.InitialTrainingDelaySeconds)), ct);
         }
         catch (OperationCanceledException)
         {
@@ -86,7 +90,7 @@ public class ModelRetrainingHostedService : BackgroundService
             _logger.LogInformation("No active recommendation model found; starting initial training");
 
             var orchestrator = scope.ServiceProvider.GetRequiredService<IModelRetrainingOrchestrator>();
-            await orchestrator.RunAsync(ct);
+            await orchestrator.RunAsync(cancellationToken: ct);
         }
         catch (InvalidOperationException ex)
         {

@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.AspNetCore.Identity;
 using MovieRecommendation.Application.Abstractions.Messaging;
+using MovieRecommendation.Application.Common.Constants;
 using MovieRecommendation.Application.Common.Extensions;
+using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
 using MovieRecommendation.Domain.Exceptions;
@@ -12,13 +14,16 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
 {
     private readonly UserManager<User> _userManager;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
+    private readonly ICacheService _cache;
 
     public DeleteUserCommandHandler(
         UserManager<User> userManager,
-        IRefreshTokenRepository refreshTokenRepository)
+        IRefreshTokenRepository refreshTokenRepository,
+        ICacheService cache)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;
+        _cache = cache;
     }
 
     public async Task<Unit> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
@@ -37,6 +42,10 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
         result.EnsureSucceeded("Failed to delete user");
 
         await _refreshTokenRepository.RevokeAllForUserAsync(user.Id, cancellationToken);
+
+        _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(user.Id));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(user.Id));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.ColdStartFor(user.Id));
 
         return Unit.Value;
     }

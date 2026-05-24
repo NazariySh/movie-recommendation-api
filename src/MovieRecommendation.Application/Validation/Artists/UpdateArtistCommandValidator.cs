@@ -20,6 +20,18 @@ public class UpdateArtistCommandValidator : AbstractValidator<UpdateArtistComman
         RuleFor(x => x.Model.Biography).MaximumLength(4000)
             .When(x => x.Model.Biography is not null);
 
+        RuleFor(x => x.Model.PlaceOfBirth).MaximumLength(255)
+            .When(x => x.Model.PlaceOfBirth is not null);
+
+        RuleFor(x => x.Model.Nationality).MaximumLength(100)
+            .When(x => x.Model.Nationality is not null);
+
+        RuleFor(x => x.Model.Gender).MaximumLength(20)
+            .When(x => x.Model.Gender is not null);
+
+        RuleFor(x => x.Model.KnownForDepartment).MaximumLength(50)
+            .When(x => x.Model.KnownForDepartment is not null);
+
         RuleFor(x => x.Model)
             .Must(m => !m.DateOfDeath.HasValue || !m.Birthday.HasValue || m.DateOfDeath > m.Birthday)
             .WithMessage("Date of death must be after birthday.");

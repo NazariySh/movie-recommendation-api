@@ -34,7 +34,7 @@ public class SemanticSearchEngine : ISearchEngine
         return results.Select(r => new ScoredMovie(
             MovieId: r.Id,
             Score: Math.Clamp(1.0 - r.Distance / 2.0, 0.0, 1.0),
-            Reason: "Semantic match"))
+            Reason: RecommendationReason.SemanticMatch))
             .ToList();
     }
 }

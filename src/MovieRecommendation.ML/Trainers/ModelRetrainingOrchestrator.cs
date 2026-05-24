@@ -1,10 +1,13 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using MovieRecommendation.Application.DTOs.Recommendations;
 using MovieRecommendation.Application.Interfaces.ML;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Predictions;
+using MovieRecommendation.Domain.Settings;
 using MovieRecommendation.Infrastructure.Data;
 using MovieRecommendation.ML.Models;
 using MovieRecommendation.ML.Predictors;
@@ -13,28 +16,29 @@ namespace MovieRecommendation.ML.Trainers;
 
 public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
 {
-    public const int MinRatingsToTrain = 100;
-
-    private const int MaxPredictionsPerUser = 200;
-    private const int InsertBatchSize = 5000;
-
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IHostApplicationLifetime _lifetime;
+    private readonly RecommendationSettings _settings;
     private readonly ILogger<ModelRetrainingOrchestrator> _logger;
 
     public ModelRetrainingOrchestrator(
         IServiceScopeFactory scopeFactory,
+        IHostApplicationLifetime lifetime,
+        IOptions<RecommendationSettings> settings,
         ILogger<ModelRetrainingOrchestrator> logger)
     {
         _scopeFactory = scopeFactory;
+        _lifetime = lifetime;
+        _settings = settings.Value;
         _logger = logger;
     }
 
-    public async Task<RetrainResultDto> RunAsync(CancellationToken cancellationToken = default)
+    public async Task<RetrainResultDto> RunAsync(Guid? actorUserId = null, CancellationToken cancellationToken = default)
     {
         var jobId = NewJobId();
         var triggeredAt = DateTime.UtcNow;
 
-        var result = await ExecuteAsync(jobId, cancellationToken);
+        var result = await ExecuteAsync(jobId, actorUserId, cancellationToken);
 
         return new RetrainResultDto
         {
@@ -44,7 +48,7 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
         };
     }
 
-    public RetrainResultDto Enqueue()
+    public RetrainResultDto Enqueue(Guid? actorUserId = null)
     {
         var jobId = NewJobId();
         var triggeredAt = DateTime.UtcNow;
@@ -53,7 +57,11 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
         {
             try
             {
-                await ExecuteAsync(jobId, CancellationToken.None);
+                await ExecuteAsync(jobId, actorUserId, _lifetime.ApplicationStopping);
+            }
+            catch (OperationCanceledException) when (_lifetime.ApplicationStopping.IsCancellationRequested)
+            {
+                _logger.LogInformation("Background retrain job {JobId} cancelled by app shutdown", jobId);
             }
             catch (Exception ex)
             {
@@ -69,7 +77,7 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
         };
     }
 
-    private async Task<TrainingResult> ExecuteAsync(string jobId, CancellationToken ct)
+    private async Task<TrainingResult> ExecuteAsync(string jobId, Guid? actorUserId, CancellationToken ct)
     {
         using var scope = _scopeFactory.CreateScope();
         var sp = scope.ServiceProvider;
@@ -77,7 +85,10 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
         var trainer = sp.GetRequiredService<RecommendationModelTrainer>();
         var metadataRepo = sp.GetRequiredService<IMlModelMetadataRepository>();
 
-        _logger.LogInformation("Retrain job {JobId} fetching ratings...", jobId);
+        _logger.LogInformation(
+            "Retrain job {JobId} fetching ratings (triggered by {ActorUserId})...",
+            jobId,
+            actorUserId?.ToString() ?? "system");
 
         var ratings = await db.Ratings
             .AsNoTracking()
@@ -89,13 +100,13 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
             })
             .ToListAsync(ct);
 
-        if (ratings.Count < MinRatingsToTrain)
+        if (ratings.Count < _settings.MinRatingsToTrain)
         {
             _logger.LogWarning(
                 "Retrain job {JobId} skipped: {Count} ratings (need {Min})",
-                jobId, ratings.Count, MinRatingsToTrain);
+                jobId, ratings.Count, _settings.MinRatingsToTrain);
             throw new InvalidOperationException(
-                $"Need at least {MinRatingsToTrain} ratings to train; currently {ratings.Count}.");
+                $"Need at least {_settings.MinRatingsToTrain} ratings to train; currently {ratings.Count}.");
         }
 
         var result = await trainer.TrainAsync(ratings, ct);
@@ -131,21 +142,20 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
         string jobId,
         CancellationToken ct)
     {
-        var activeUserIds = await db.Ratings
+        var ratingsByUser = await db.Ratings
             .AsNoTracking()
-            .Select(r => r.UserId)
-            .Distinct()
-            .ToListAsync(ct);
+            .GroupBy(r => r.UserId)
+            .Select(g => new { UserId = g.Key, MovieIds = g.Select(r => r.MovieId).ToList() })
+            .ToDictionaryAsync(x => x.UserId, x => x.MovieIds, ct);
 
-        var candidateMovieIds = await db.Ratings
-            .AsNoTracking()
-            .Select(r => r.MovieId)
+        var candidateMovieIds = ratingsByUser
+            .SelectMany(kv => kv.Value)
             .Distinct()
-            .ToListAsync(ct);
+            .ToList();
 
         _logger.LogInformation(
             "Retrain job {JobId} materializing predictions: {Users} users x up to {Movies} candidates",
-            jobId, activeUserIds.Count, candidateMovieIds.Count);
+            jobId, ratingsByUser.Count, candidateMovieIds.Count);
 
         var deletedSameVersion = await db.MlPredictions
             .Where(p => p.ModelVersion == version)
@@ -157,18 +167,12 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
                 "Retrain job {JobId} cleared {Count} stale rows from same version", jobId, deletedSameVersion);
         }
 
-        var buffer = new List<MlPrediction>(InsertBatchSize);
+        var buffer = new List<MlPrediction>(_settings.PredictionInsertBatchSize);
         var totalInserted = 0;
 
-        foreach (var userId in activeUserIds)
+        foreach (var (userId, ratedMovies) in ratingsByUser)
         {
             ct.ThrowIfCancellationRequested();
-
-            var ratedMovies = await db.Ratings
-                .AsNoTracking()
-                .Where(r => r.UserId == userId)
-                .Select(r => r.MovieId)
-                .ToListAsync(ct);
 
             var ratedSet = ratedMovies.ToHashSet();
             var candidates = candidateMovieIds.Where(id => !ratedSet.Contains(id)).ToList();
@@ -178,7 +182,7 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
 
             var topK = predictions
                 .OrderByDescending(kv => kv.Value)
-                .Take(MaxPredictionsPerUser);
+                .Take(_settings.MaxPredictionsPerUser);
 
             foreach (var (movieId, score) in topK)
             {
@@ -190,7 +194,7 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
                     ModelVersion = version,
                 });
 
-                if (buffer.Count >= InsertBatchSize)
+                if (buffer.Count >= _settings.PredictionInsertBatchSize)
                 {
                     totalInserted += await FlushAsync(db, buffer, ct);
                 }
@@ -202,13 +206,20 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
             totalInserted += await FlushAsync(db, buffer, ct);
         }
 
+        var retainedVersions = await db.MlModelMetadata
+            .AsNoTracking()
+            .OrderByDescending(m => m.TrainedAt)
+            .Select(m => m.Version)
+            .Take(Math.Max(1, _settings.RetainPredictionVersions))
+            .ToListAsync(ct);
+
         var evicted = await db.MlPredictions
-            .Where(p => p.ModelVersion != version)
+            .Where(p => !retainedVersions.Contains(p.ModelVersion))
             .ExecuteDeleteAsync(ct);
 
         _logger.LogInformation(
-            "Retrain job {JobId} stored {Inserted} predictions; evicted {Evicted} from older versions",
-            jobId, totalInserted, evicted);
+            "Retrain job {JobId} stored {Inserted} predictions; retained versions {Versions}; evicted {Evicted} from older",
+            jobId, totalInserted, string.Join(",", retainedVersions), evicted);
     }
 
     private static async Task<int> FlushAsync(
@@ -224,5 +235,9 @@ public class ModelRetrainingOrchestrator : IModelRetrainingOrchestrator
         return count;
     }
 
-    private static string NewJobId() => $"retrain-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}".Substring(0, 32);
+    private static string NewJobId()
+    {
+        var raw = $"retrain-{DateTime.UtcNow:yyyyMMddHHmmss}-{Guid.NewGuid():N}";
+        return raw[..Math.Min(32, raw.Length)];
+    }
 }

@@ -141,6 +141,25 @@ public class RegisterCommandHandlerTests
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*Password too weak*");
     }
 
+    [Fact]
+    public async Task Handle_Should_CommitTransactionAndSwallowEmailError_When_VerificationEmailFails()
+    {
+        _userRepositoryMock.Setup(r => r.IsEmailUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _userRepositoryMock.Setup(r => r.IsUsernameUniqueAsync(It.IsAny<string>(), It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<User>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
+        _userManagerMock.Setup(m => m.AddToRoleAsync(It.IsAny<User>(), It.IsAny<string>())).ReturnsAsync(IdentityResult.Success);
+        _userManagerMock.Setup(m => m.GenerateEmailConfirmationTokenAsync(It.IsAny<User>())).ReturnsAsync("verify-token");
+        _emailSenderMock
+            .Setup(e => e.SendVerificationAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("smtp down"));
+
+        await _handler.Handle(new RegisterCommand(NewDto()), CancellationToken.None);
+
+        _transactionMock.Verify(t => t.CommitAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _transactionMock.Verify(t => t.RollbackAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     private static RegisterRequestDto NewDto() => new()
     {
         Username = "newbie",

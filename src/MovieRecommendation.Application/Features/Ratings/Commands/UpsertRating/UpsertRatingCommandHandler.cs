@@ -86,5 +86,7 @@ public class UpsertRatingCommandHandler : ICommandHandler<UpsertRatingCommand, R
         _cache.RemoveByPrefix(MovieCacheKeys.ListPrefix);
         _cache.RemoveByPrefix(MovieCacheKeys.DetailFor(movieId));
         _cache.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(userId));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.ColdStartFor(userId));
+        _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(userId));
     }
 }

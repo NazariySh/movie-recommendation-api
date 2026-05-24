@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Azure.Identity;
 using MovieRecommendation.API.Extensions;
 using MovieRecommendation.API.Middlewares;
 using MovieRecommendation.Application;
@@ -7,9 +8,15 @@ using MovieRecommendation.ML;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var keyVaultUri = builder.Configuration["KeyVault:Uri"];
+if (!string.IsNullOrWhiteSpace(keyVaultUri))
+{
+    builder.Configuration.AddAzureKeyVault(new Uri(keyVaultUri), new DefaultAzureCredential());
+}
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
-builder.Services.AddMlServices(builder.Configuration);
+builder.Services.AddMlServices();
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     {

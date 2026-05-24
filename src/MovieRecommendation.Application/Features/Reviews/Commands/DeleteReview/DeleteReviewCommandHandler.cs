@@ -54,6 +54,7 @@ public class DeleteReviewCommandHandler : ICommandHandler<DeleteReviewCommand>
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         _cache.RemoveByPrefix(ReviewCacheKeys.ForMovie(review.MovieId));
+        _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(review.UserId));
 
         return Unit.Value;
     }

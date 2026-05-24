@@ -201,47 +201,6 @@ public class ArtistRepository : BaseRepository<Person>, IArtistRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<ArtistDto>> GetPopularAsync(int count, CancellationToken cancellationToken = default)
-    {
-        var rows = await DbContext.People
-            .AsNoTracking()
-            .Where(p => !p.IsDeleted)
-            .Select(p => new
-            {
-                p.Id,
-                p.Slug,
-                p.Name,
-                p.PhotoUrl,
-                p.KnownForDepartment,
-                MovieCount = DbContext.MovieCasts.Count(mc => mc.PersonId == p.Id),
-                Roles = DbContext.MovieCasts
-                    .Where(mc => mc.PersonId == p.Id)
-                    .Select(mc => mc.Role)
-                    .Distinct()
-                    .ToList(),
-            })
-            .Where(x => x.MovieCount > 0)
-            .OrderByDescending(x => x.MovieCount)
-            .Take(count)
-            .ToListAsync(cancellationToken);
-
-        return rows.Select(r => new ArtistDto
-        {
-            Id = r.Id,
-            Slug = r.Slug,
-            Name = r.Name,
-            PhotoUrl = r.PhotoUrl,
-            KnownForDepartment = r.KnownForDepartment,
-            MovieCount = r.MovieCount,
-            Roles = r.Roles
-                .Where(role => !string.IsNullOrWhiteSpace(role))
-                .Select(role => role.ToLower())
-                .Distinct()
-                .OrderBy(role => role)
-                .ToList(),
-        }).ToList();
-    }
-
     public Task<bool> HasMovieCastAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return DbContext.MovieCasts.AnyAsync(mc => mc.PersonId == id, cancellationToken);

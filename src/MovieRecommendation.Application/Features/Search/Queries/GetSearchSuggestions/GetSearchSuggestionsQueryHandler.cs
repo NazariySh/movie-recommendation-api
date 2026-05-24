@@ -9,8 +9,6 @@ namespace MovieRecommendation.Application.Features.Search.Queries.GetSearchSugge
 public class GetSearchSuggestionsQueryHandler
     : IQueryHandler<GetSearchSuggestionsQuery, SearchSuggestionsDto>
 {
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-
     private const int MinQueryLength = 2;
 
     private readonly IMovieRepository _movieRepository;
@@ -38,7 +36,7 @@ public class GetSearchSuggestionsQueryHandler
 
         var key = SearchCacheKeys.Suggestions(request.Lang, trimmed, request.Limit);
 
-        return await _cache.GetOrSetAsync(key, ct => ComputeAsync(trimmed, ct), CacheTtl, cancellationToken);
+        return await _cache.GetOrSetAsync(key, ct => ComputeAsync(trimmed, ct), SearchCacheTtls.Suggestions, cancellationToken);
 
         async Task<SearchSuggestionsDto> ComputeAsync(string q, CancellationToken ct)
         {

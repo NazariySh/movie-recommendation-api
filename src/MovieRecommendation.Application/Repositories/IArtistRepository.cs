@@ -19,8 +19,6 @@ public interface IArtistRepository : IRepository<Person>
         string lang,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<ArtistDto>> GetPopularAsync(int count, CancellationToken cancellationToken = default);
-
     Task<bool> HasMovieCastAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<bool> SlugExistsAsync(string slug, Guid? excludeId = null, CancellationToken cancellationToken = default);

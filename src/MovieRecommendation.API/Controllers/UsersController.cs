@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using MovieRecommendation.API.Extensions;
 using MovieRecommendation.Application.DTOs.Users;
 using MovieRecommendation.Application.Features.Ratings.Queries.GetUserRatings;
@@ -49,6 +50,7 @@ public class UsersController : BaseController
 
     [Authorize]
     [HttpPost("me/avatar")]
+    [EnableRateLimiting("auth-forgot")]
     [RequestSizeLimit(2 * 1024 * 1024)]
     public async Task<IActionResult> UploadAvatar(IFormFile file, CancellationToken ct)
     {
@@ -63,8 +65,7 @@ public class UsersController : BaseController
                 UserId: User.GetId(),
                 Content: stream,
                 ContentType: file.ContentType,
-                Length: file.Length,
-                FileName: file.FileName),
+                Length: file.Length),
             ct);
 
         return Ok(profile);
@@ -101,6 +102,7 @@ public class UsersController : BaseController
 
     [Authorize]
     [HttpPatch("me/password")]
+    [EnableRateLimiting("auth-forgot")]
     public async Task<IActionResult> ChangePassword(ChangePasswordRequestDto request, CancellationToken ct)
     {
         await Mediator.Send(new ChangePasswordCommand(User.GetId(), request), ct);

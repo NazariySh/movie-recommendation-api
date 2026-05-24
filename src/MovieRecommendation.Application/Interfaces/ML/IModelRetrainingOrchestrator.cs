@@ -4,7 +4,7 @@ namespace MovieRecommendation.Application.Interfaces.ML;
 
 public interface IModelRetrainingOrchestrator
 {
-    Task<RetrainResultDto> RunAsync(CancellationToken cancellationToken = default);
+    Task<RetrainResultDto> RunAsync(Guid? actorUserId = null, CancellationToken cancellationToken = default);
 
-    RetrainResultDto Enqueue();
+    RetrainResultDto Enqueue(Guid? actorUserId = null);
 }

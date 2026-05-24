@@ -27,7 +27,7 @@ public class UpdateProfileCommandHandler : ICommandHandler<UpdateProfileCommand,
         var user = await _userManager.FindByIdAsync(request.UserId.ToString())
             ?? throw new NotFoundException($"User with id {request.UserId} not found");
 
-        var requestedUsername = request.Request.Username.Trim();
+        var requestedUsername = request.Model.Username.Trim();
 
         if (!string.Equals(user.UserName, requestedUsername, StringComparison.OrdinalIgnoreCase))
         {
@@ -40,8 +40,8 @@ public class UpdateProfileCommandHandler : ICommandHandler<UpdateProfileCommand,
             setUsername.EnsureSucceeded("Failed to update username");
         }
 
-        user.Bio = string.IsNullOrWhiteSpace(request.Request.Bio) ? null : request.Request.Bio.Trim();
-        user.PreferredLanguage = request.Request.PreferredLanguage;
+        user.Bio = string.IsNullOrWhiteSpace(request.Model.Bio) ? null : request.Model.Bio.Trim();
+        user.PreferredLanguage = request.Model.PreferredLanguage;
         user.UpdatedAt = DateTime.UtcNow;
 
         var update = await _userManager.UpdateAsync(user);

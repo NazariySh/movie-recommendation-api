@@ -59,7 +59,6 @@ public class GetMovieReviewsQueryHandlerTests
             .Setup(r => r.GetForMovieAsync(movieId, dto, viewerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(fromRepo);
 
-        // Simulate a cache miss: the cache calls back into the factory.
         _cacheMock
             .Setup(c => c.GetOrSetAsync(
                 It.IsAny<string>(),

@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using MovieRecommendation.API.Extensions;
 using MovieRecommendation.Application.DTOs.Admin;
 using MovieRecommendation.Application.Features.Admin.Users.Commands.AdminDeleteUser;
 using MovieRecommendation.Application.Features.Admin.Users.Commands.DisableUser;
@@ -39,14 +41,14 @@ public class AdminUsersController : BaseController
     [HttpPatch("{id:guid}/roles")]
     public async Task<IActionResult> UpdateRoles(Guid id, UpdateUserRolesDto body, CancellationToken ct)
     {
-        await Mediator.Send(new UpdateUserRolesCommand(id, body.Roles), ct);
+        await Mediator.Send(new UpdateUserRolesCommand(User.GetId(), id, body.Roles), ct);
         return NoContent();
     }
 
     [HttpPost("{id:guid}/disable")]
     public async Task<IActionResult> Disable(Guid id, DisableUserDto body, CancellationToken ct)
     {
-        await Mediator.Send(new DisableUserCommand(id, body.Reason), ct);
+        await Mediator.Send(new DisableUserCommand(User.GetId(), id, body.Reason), ct);
         return NoContent();
     }
 
@@ -58,16 +60,18 @@ public class AdminUsersController : BaseController
     }
 
     [HttpPost("{id:guid}/force-reset-password")]
+    [EnableRateLimiting("auth-forgot")]
     public async Task<IActionResult> ForceResetPassword(Guid id, CancellationToken ct)
     {
-        await Mediator.Send(new ForceResetPasswordCommand(id), ct);
+        await Mediator.Send(new ForceResetPasswordCommand(User.GetId(), id), ct);
         return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
+    [EnableRateLimiting("auth-forgot")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
-        await Mediator.Send(new AdminDeleteUserCommand(id), ct);
+        await Mediator.Send(new AdminDeleteUserCommand(User.GetId(), id), ct);
         return NoContent();
     }
 }

@@ -99,7 +99,6 @@ public class GetSearchSuggestionsQueryHandlerTests
             .Setup(r => r.SearchSuggestionsAsync("matrix", 5, It.IsAny<CancellationToken>()))
             .ReturnsAsync(artists);
 
-        // Simulate a cache miss: forward to the factory.
         _cacheMock
             .Setup(c => c.GetOrSetAsync(
                 It.IsAny<string>(),

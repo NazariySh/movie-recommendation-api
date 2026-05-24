@@ -9,7 +9,6 @@ namespace MovieRecommendation.Application.Features.Recommendations.Queries.GetPo
 public class GetPopularQueryHandler : IQueryHandler<GetPopularQuery, IReadOnlyList<MovieDto>>
 {
     private const int MinRatingsForLeaderboard = 10;
-    private static readonly TimeSpan CacheTtl = TimeSpan.FromHours(6);
 
     private readonly IMovieRepository _movieRepository;
     private readonly ICacheService _cache;
@@ -24,7 +23,7 @@ public class GetPopularQueryHandler : IQueryHandler<GetPopularQuery, IReadOnlyLi
     {
         var key = RecommendationCacheKeys.Popular(request.Type, request.GenreSlug, request.Count, request.Lang);
 
-        return _cache.GetOrSetAsync(key, ComputeAsync, CacheTtl, cancellationToken);
+        return _cache.GetOrSetAsync(key, ComputeAsync, RecommendationCacheTtls.Popular, cancellationToken);
 
         async Task<IReadOnlyList<MovieDto>> ComputeAsync(CancellationToken ct)
         {

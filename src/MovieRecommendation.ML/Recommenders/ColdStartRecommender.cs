@@ -40,7 +40,7 @@ public class ColdStartRecommender
 
         var results = await query.ToListAsync(ct);
 
-        var reason = hasGenreFilter ? "Popular in your genres" : "Top rated";
+        var reason = hasGenreFilter ? RecommendationReason.PopularInGenres : RecommendationReason.TopRated;
 
         return results
             .Select(m => new ScoredMovie(

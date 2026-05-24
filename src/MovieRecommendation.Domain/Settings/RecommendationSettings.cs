@@ -23,4 +23,26 @@ public class RecommendationSettings
     public double LikedThreshold { get; set; } = 8.0;
 
     public double DislikedThreshold { get; set; } = 4.0;
+
+    public int MinRatingsToTrain { get; set; } = 100;
+
+    public int MaxPredictionsPerUser { get; set; } = 200;
+
+    public int PredictionInsertBatchSize { get; set; } = 5000;
+
+    public int RetainPredictionVersions { get; set; } = 2;
+
+    public int RetrainingIntervalDays { get; set; } = 7;
+
+    public int InitialTrainingDelaySeconds { get; set; } = 15;
+
+    public string ModelStoragePath { get; set; } = "MLModels";
+
+    public int MatrixFactorizationIterations { get; set; } = 20;
+
+    public int MatrixFactorizationRank { get; set; } = 100;
+
+    public double MatrixFactorizationLearningRate { get; set; } = 0.01;
+
+    public double MatrixFactorizationLambda { get; set; } = 0.025;
 }

@@ -3,4 +3,4 @@ using MovieRecommendation.Application.DTOs.Recommendations;
 
 namespace MovieRecommendation.Application.Features.Recommendations.Commands.TriggerRetrain;
 
-public record TriggerRetrainCommand(bool WaitForCompletion = false) : ICommand<RetrainResultDto>;
+public record TriggerRetrainCommand(Guid ActorUserId, bool WaitForCompletion = false) : ICommand<RetrainResultDto>;

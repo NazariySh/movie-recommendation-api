@@ -3,6 +3,7 @@ using Moq;
 using MovieRecommendation.Application.Common.Models;
 using MovieRecommendation.Application.DTOs.Movies;
 using MovieRecommendation.Application.Features.Movies.Queries.SemanticSearchMovies;
+using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Interfaces.ML;
 using MovieRecommendation.Application.Repositories;
 
@@ -12,13 +13,24 @@ public class SemanticSearchMoviesQueryHandlerTests
 {
     private readonly Mock<ISearchEngine> _searchEngineMock;
     private readonly Mock<IMovieRepository> _movieRepositoryMock;
+    private readonly Mock<ICacheService> _cacheMock;
     private readonly SemanticSearchMoviesQueryHandler _handler;
 
     public SemanticSearchMoviesQueryHandlerTests()
     {
         _searchEngineMock = new Mock<ISearchEngine>();
         _movieRepositoryMock = new Mock<IMovieRepository>();
-        _handler = new SemanticSearchMoviesQueryHandler(_searchEngineMock.Object, _movieRepositoryMock.Object);
+        _cacheMock = new Mock<ICacheService>();
+        _cacheMock
+            .Setup(c => c.GetOrSetAsync(
+                It.IsAny<string>(),
+                It.IsAny<Func<CancellationToken, Task<SemanticSearchMoviesResult>>>(),
+                It.IsAny<TimeSpan>(),
+                It.IsAny<CancellationToken>()))
+            .Returns<string, Func<CancellationToken, Task<SemanticSearchMoviesResult>>, TimeSpan, CancellationToken>(
+                (_, factory, _, ct) => factory(ct));
+
+        _handler = new SemanticSearchMoviesQueryHandler(_searchEngineMock.Object, _movieRepositoryMock.Object, _cacheMock.Object);
     }
 
     [Fact]
@@ -101,7 +113,7 @@ public class SemanticSearchMoviesQueryHandlerTests
                 new(idA, 0.88),
                 new(idC, 0.85),
             });
-        // Repository returns in shuffled order on purpose — handler must reorder.
+        
         _movieRepositoryMock
             .Setup(r => r.GetListItemsByIdsAsync(It.IsAny<IReadOnlyList<Guid>>(), "en", It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<MovieListItemDto>

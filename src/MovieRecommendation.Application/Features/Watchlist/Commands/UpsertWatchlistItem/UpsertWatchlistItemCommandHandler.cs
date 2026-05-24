@@ -67,6 +67,7 @@ public class UpsertWatchlistItemCommandHandler : ICommandHandler<UpsertWatchlist
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         _cache.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(request.UserId));
+        _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(request.UserId));
         return Unit.Value;
     }
 }

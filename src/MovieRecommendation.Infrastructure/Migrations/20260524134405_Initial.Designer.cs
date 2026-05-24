@@ -13,7 +13,7 @@ using Pgvector;
 namespace MovieRecommendation.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260523202240_Initial")]
+    [Migration("20260524134405_Initial")]
     partial class Initial
     {
         /// <inheritdoc />

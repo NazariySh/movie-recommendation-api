@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using MovieRecommendation.Application.Abstractions.Messaging;
+using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
 using MovieRecommendation.Domain.Enums;
 using MovieRecommendation.Domain.Exceptions;
@@ -18,18 +19,26 @@ public class UpdateUserRolesCommandHandler : ICommandHandler<UpdateUserRolesComm
     };
 
     private readonly UserManager<User> _userManager;
+    private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly ILogger<UpdateUserRolesCommandHandler> _logger;
 
     public UpdateUserRolesCommandHandler(
         UserManager<User> userManager,
+        IRefreshTokenRepository refreshTokenRepository,
         ILogger<UpdateUserRolesCommandHandler> logger)
     {
         _userManager = userManager;
+        _refreshTokenRepository = refreshTokenRepository;
         _logger = logger;
     }
 
     public async Task<Unit> Handle(UpdateUserRolesCommand request, CancellationToken cancellationToken)
     {
+        if (request.ActorUserId == request.UserId)
+        {
+            throw new ForbiddenException("Admins cannot change their own roles.");
+        }
+
         var user = await _userManager.FindByIdAsync(request.UserId.ToString())
             ?? throw new NotFoundException($"User {request.UserId} not found.");
 
@@ -42,12 +51,17 @@ public class UpdateUserRolesCommandHandler : ICommandHandler<UpdateUserRolesComm
         var invalid = requested.Where(r => !AllowedRoles.Contains(r)).ToList();
         if (invalid.Count > 0)
         {
-            throw new ForbiddenException($"Unknown role(s): {string.Join(", ", invalid)}.");
+            throw new ArgumentException($"Unknown role(s): {string.Join(", ", invalid)}.", nameof(request.Roles));
         }
 
         var current = await _userManager.GetRolesAsync(user);
         var toRemove = current.Except(requested, StringComparer.OrdinalIgnoreCase).ToList();
         var toAdd = requested.Except(current, StringComparer.OrdinalIgnoreCase).ToList();
+
+        if (toRemove.Count == 0 && toAdd.Count == 0)
+        {
+            return Unit.Value;
+        }
 
         if (toRemove.Count > 0)
         {
@@ -69,9 +83,11 @@ public class UpdateUserRolesCommandHandler : ICommandHandler<UpdateUserRolesComm
             }
         }
 
+        await _refreshTokenRepository.RevokeAllForUserAsync(user.Id, cancellationToken);
+
         _logger.LogInformation(
-            "Updated roles for user {UserId}: -[{Removed}] +[{Added}]",
-            user.Id, string.Join(",", toRemove), string.Join(",", toAdd));
+            "Actor {ActorUserId} updated roles for user {UserId}: -[{Removed}] +[{Added}]",
+            request.ActorUserId, user.Id, string.Join(",", toRemove), string.Join(",", toAdd));
 
         return Unit.Value;
     }

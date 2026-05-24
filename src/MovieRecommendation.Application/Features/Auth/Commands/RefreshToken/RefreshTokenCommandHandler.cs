@@ -86,6 +86,12 @@ public class RefreshTokenCommandHandler : ICommandHandler<RefreshTokenCommand, L
             throw new UnauthorizedAccessException("User account is disabled.");
         }
 
+        if (!user.EmailConfirmed)
+        {
+            _logger.LogWarning("Refresh blocked: email not verified for {UserId}", user.Id);
+            throw new EmailNotVerifiedException("Email is not verified. Check your inbox.");
+        }
+
         var roles = await _userManager.GetRolesAsync(user);
         var newAccessToken = _tokenProvider.GenerateAccessToken(user, roles);
         var newRefreshDto = _tokenProvider.GenerateRefreshToken();

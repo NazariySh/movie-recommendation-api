@@ -93,7 +93,6 @@ public class UpdateArtistCommandHandlerTests : IDisposable
     [Fact]
     public async Task Handle_Should_KeepCurrentSlug_When_NameMatchesOwnSlug()
     {
-        // Renaming "Original" → "Original" is a no-op rename (same string) — slug stays.
         var artist = TestData.Person(name: "Original", slug: "original");
         _dbContext.People.Add(artist);
         await _dbContext.SaveChangesAsync();

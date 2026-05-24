@@ -48,8 +48,14 @@ public class UploadAvatarCommandHandler : ICommandHandler<UploadAvatarCommand, U
                 $"Unsupported content type '{request.ContentType}'. Allowed: jpeg, png, webp.");
         }
 
-        var path = $"avatars/{user.Id}.{extension}";
-        var url = await _blobStorage.UploadAsync(path, request.Content, request.ContentType, cancellationToken);
+        var newPath = $"avatars/{user.Id}.{extension}";
+        var url = await _blobStorage.UploadAsync(newPath, request.Content, request.ContentType, cancellationToken);
+
+        foreach (var otherExt in AllowedContentTypes.Values)
+        {
+            if (otherExt == extension) continue;
+            await _blobStorage.DeleteAsync($"avatars/{user.Id}.{otherExt}", cancellationToken);
+        }
 
         user.AvatarUrl = url;
         user.UpdatedAt = DateTime.UtcNow;

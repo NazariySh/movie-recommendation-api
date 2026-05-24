@@ -1,6 +1,8 @@
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
+using MovieRecommendation.API.Extensions;
 using MovieRecommendation.Application.Features.Recommendations.Commands.TriggerRetrain;
 using MovieRecommendation.Application.Features.Recommendations.Queries.GetModelStatus;
 using MovieRecommendation.Domain.Constants;
@@ -24,9 +26,10 @@ public class AdminRecommendationsController : BaseController
     }
 
     [HttpPost("retrain")]
+    [EnableRateLimiting("auth-forgot")]
     public async Task<IActionResult> TriggerRetrain([FromQuery] bool wait = false, CancellationToken ct = default)
     {
-        var result = await Mediator.Send(new TriggerRetrainCommand(wait), ct);
+        var result = await Mediator.Send(new TriggerRetrainCommand(User.GetId(), wait), ct);
         return Accepted(result);
     }
 }

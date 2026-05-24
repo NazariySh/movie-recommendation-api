@@ -59,9 +59,7 @@ internal sealed class GlobalExceptionHandler : IExceptionHandler
     {
         ArgumentNullException or ArgumentException => StatusCodes.Status400BadRequest,
         UnauthorizedAccessException => StatusCodes.Status401Unauthorized,
-        ForbiddenException => StatusCodes.Status403Forbidden,
-        NotFoundException => StatusCodes.Status404NotFound,
-        AlreadyExistsException => StatusCodes.Status409Conflict,
+        DomainException domain => (int)domain.StatusCode,
         _ => StatusCodes.Status500InternalServerError
     };
 }

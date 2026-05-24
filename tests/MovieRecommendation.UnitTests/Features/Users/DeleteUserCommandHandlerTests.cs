@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Moq;
 using MovieRecommendation.Application.Common.Constants;
 using MovieRecommendation.Application.Features.Users.Commands.DeleteUser;
+using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
 using MovieRecommendation.Domain.Exceptions;
@@ -14,15 +15,18 @@ public class DeleteUserCommandHandlerTests
 {
     private readonly Mock<UserManager<User>> _userManagerMock;
     private readonly Mock<IRefreshTokenRepository> _refreshTokenRepositoryMock;
+    private readonly Mock<ICacheService> _cacheMock;
     private readonly DeleteUserCommandHandler _handler;
 
     public DeleteUserCommandHandlerTests()
     {
         _userManagerMock = UserManagerMockFactory.Create();
         _refreshTokenRepositoryMock = new Mock<IRefreshTokenRepository>();
+        _cacheMock = new Mock<ICacheService>();
         _handler = new DeleteUserCommandHandler(
             _userManagerMock.Object,
-            _refreshTokenRepositoryMock.Object);
+            _refreshTokenRepositoryMock.Object,
+            _cacheMock.Object);
     }
 
     [Fact]
@@ -46,10 +50,11 @@ public class DeleteUserCommandHandlerTests
 
         _userManagerMock.Verify(m => m.UpdateAsync(It.IsAny<User>()), Times.Never);
         _refreshTokenRepositoryMock.Verify(r => r.RevokeAllForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cacheMock.Verify(c => c.RemoveByPrefix(It.IsAny<string>()), Times.Never);
     }
 
     [Fact]
-    public async Task Handle_Should_Anonymize_RevokeTokens_AndSave()
+    public async Task Handle_Should_Anonymize_RevokeTokens_InvalidateCaches_AndSave()
     {
         var user = new User
         {
@@ -71,8 +76,10 @@ public class DeleteUserCommandHandlerTests
         user.Bio.Should().BeNull();
         user.AvatarUrl.Should().BeNull();
         user.EmailConfirmed.Should().BeFalse();
-        user.LockoutEnd.Should().Be(DateTimeOffset.MaxValue);
         _refreshTokenRepositoryMock.Verify(r => r.RevokeAllForUserAsync(user.Id, It.IsAny<CancellationToken>()), Times.Once);
+        _cacheMock.Verify(c => c.RemoveByPrefix(UserCacheKeys.StatsForUser(user.Id)), Times.Once);
+        _cacheMock.Verify(c => c.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(user.Id)), Times.Once);
+        _cacheMock.Verify(c => c.RemoveByPrefix(RecommendationCacheKeys.ColdStartFor(user.Id)), Times.Once);
     }
 
     [Fact]
@@ -87,5 +94,6 @@ public class DeleteUserCommandHandlerTests
 
         await act.Should().ThrowAsync<InvalidOperationException>().WithMessage("*fail*");
         _refreshTokenRepositoryMock.Verify(r => r.RevokeAllForUserAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+        _cacheMock.Verify(c => c.RemoveByPrefix(It.IsAny<string>()), Times.Never);
     }
 }

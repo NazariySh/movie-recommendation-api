@@ -7,6 +7,7 @@ using MovieRecommendation.Application.Features.Auth.Commands.RefreshToken;
 using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Users;
+using MovieRecommendation.Domain.Exceptions;
 
 namespace MovieRecommendation.Application.Features.Auth.Commands.Login;
 
@@ -51,7 +52,7 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponseDt
         if (await _userManager.IsLockedOutAsync(user))
         {
             _logger.LogWarning("Login locked out for {UserId}", user.Id);
-            throw new UnauthorizedAccessException("Account is locked. Try again later.");
+            throw new LockedException("Account is locked. Try again later.");
         }
 
         if (!await _userManager.CheckPasswordAsync(user, request.Model.Password))
@@ -60,6 +61,12 @@ public class LoginCommandHandler : ICommandHandler<LoginCommand, LoginResponseDt
 
             _logger.LogWarning("Login failed: bad password for {UserId}", user.Id);
             throw new UnauthorizedAccessException("Invalid credentials.");
+        }
+
+        if (!user.EmailConfirmed)
+        {
+            _logger.LogWarning("Login blocked: email not verified for {UserId}", user.Id);
+            throw new EmailNotVerifiedException("Email is not verified. Check your inbox.");
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);

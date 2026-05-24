@@ -40,9 +40,36 @@ public class ForgotPasswordCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Should_SendResetEmail_When_UserExists()
+    public async Task Handle_Should_BeSilent_When_EmailUnconfirmed()
     {
-        var user = new User { Id = Guid.NewGuid(), UserName = "u", Email = "u@x.com", PreferredLanguage = "uk" };
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            UserName = "u",
+            Email = "u@x.com",
+            EmailConfirmed = false,
+        };
+        _userManagerMock.Setup(m => m.FindByEmailAsync("u@x.com")).ReturnsAsync(user);
+
+        await _handler.Handle(NewCommand("u@x.com"), CancellationToken.None);
+
+        _userManagerMock.Verify(m => m.GeneratePasswordResetTokenAsync(It.IsAny<User>()), Times.Never);
+        _emailSenderMock.Verify(e => e.SendPasswordResetAsync(
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task Handle_Should_SendResetEmail_When_UserExistsAndConfirmed()
+    {
+        var user = new User
+        {
+            Id = Guid.NewGuid(),
+            UserName = "u",
+            Email = "u@x.com",
+            PreferredLanguage = "uk",
+            EmailConfirmed = true,
+        };
         _userManagerMock.Setup(m => m.FindByEmailAsync("u@x.com")).ReturnsAsync(user);
         _userManagerMock.Setup(m => m.GeneratePasswordResetTokenAsync(user)).ReturnsAsync("reset-tok");
 

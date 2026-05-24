@@ -27,7 +27,7 @@ public class ForgotPasswordCommandHandler : ICommandHandler<ForgotPasswordComman
     {
         var user = await _userManager.FindByEmailAsync(request.Model.Email);
 
-        if (user is null)
+        if (user is null || !user.EmailConfirmed)
         {
             return Unit.Value;
         }

@@ -68,8 +68,6 @@ public class RegenerateEmbeddingCommandHandlerTests : IDisposable
 
         await handler.Handle(new RegenerateEmbeddingCommand(movie.Id), CancellationToken.None);
 
-        // In-memory test provider ignores the Embedding column (per TestDbContextFactory),
-        // so verify via the in-memory tracked entity rather than reloading.
         var tracked = _dbContext.Movies.Local.Single(m => m.Id == movie.Id);
         tracked.UpdatedAt.Should().NotBeNull();
         _embeddingMock.Verify(
