@@ -102,8 +102,6 @@ public sealed class MovieLensRatingSeeder : IMovieLensRatingSeeder
                 continue;
             }
 
-            // Per-user cap: skip once this MovieLens user has contributed enough ratings.
-            // Prevents super-raters (some users have 5000+ ratings) from dominating the matrix.
             if (perUserCount.TryGetValue(row.UserId, out var current) && current >= cap)
             {
                 continue;

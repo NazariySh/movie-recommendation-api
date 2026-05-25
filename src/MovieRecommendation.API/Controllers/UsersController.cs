@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.RateLimiting;
 using MovieRecommendation.API.Extensions;
 using MovieRecommendation.Application.DTOs.Users;
 using MovieRecommendation.Application.Features.Ratings.Queries.GetUserRatings;
-using MovieRecommendation.Application.Features.Users.Commands.ChangePassword;
 using MovieRecommendation.Application.Features.Users.Commands.DeleteUser;
 using MovieRecommendation.Application.Features.Users.Commands.UpdateGenrePreferences;
 using MovieRecommendation.Application.Features.Users.Commands.UpdateProfile;
@@ -98,15 +97,6 @@ public class UsersController : BaseController
         var lang = HttpContext.GetRequestLanguage();
         var prefs = await Mediator.Send(new UpdateGenrePreferencesCommand(User.GetId(), request, lang), ct);
         return Ok(prefs);
-    }
-
-    [Authorize]
-    [HttpPatch("me/password")]
-    [EnableRateLimiting("auth-forgot")]
-    public async Task<IActionResult> ChangePassword(ChangePasswordRequestDto request, CancellationToken ct)
-    {
-        await Mediator.Send(new ChangePasswordCommand(User.GetId(), request), ct);
-        return NoContent();
     }
 
     [HttpGet("{id:guid}/public")]

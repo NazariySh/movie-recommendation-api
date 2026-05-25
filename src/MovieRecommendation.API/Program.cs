@@ -19,15 +19,24 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddMlServices();
 
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
-    {
-        var clientUrl = builder.Configuration["Client:Url"];
-        ArgumentException.ThrowIfNullOrEmpty(clientUrl);
+{
+    var clientUrl = builder.Configuration["Client:Url"];
 
-        policy.WithOrigins(clientUrl)
+    if (!string.IsNullOrWhiteSpace(clientUrl))
+    {
+        policy.WithOrigins(clientUrl!)
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
-    }));
+    }
+    else
+    {
+        policy.AllowAnyOrigin()
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
+    }
+}));
 
 builder.Services.AddOpenApi();
 
@@ -57,6 +66,9 @@ app.UseHttpsRedirection();
 
 app.UseExceptionHandler();
 
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseCors();
 
 app.UseRateLimiter();
@@ -65,5 +77,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapFallbackToFile("index.html");
 
 app.Run();

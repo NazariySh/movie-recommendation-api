@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <SpaRoot>..\..\..\movie-recommendation-client</SpaRoot>
+    <SpaDist>$(SpaRoot)\dist\movie-recommendation-client\browser</SpaDist>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,5 +23,24 @@
     <ProjectReference Include="..\MovieRecommendation.Infrastructure\MovieRecommendation.Infrastructure.csproj" />
     <ProjectReference Include="..\MovieRecommendation.ML\MovieRecommendation.ML.csproj" />
   </ItemGroup>
+
+  <Target Name="BuildSpa" AfterTargets="ComputeFilesToPublish" Condition="'$(SkipSpaBuild)' != 'true'">
+    <Message Importance="high" Text="Installing SPA dependencies (npm ci)..." />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
+
+    <Message Importance="high" Text="Building Angular SPA (production)..." />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+
+    <ItemGroup>
+      <SpaDistFiles Include="$(SpaDist)\**\*" />
+      <ResolvedFileToPublish Include="@(SpaDistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+
+    <Message Importance="high" Text="SPA files added to publish: @(SpaDistFiles->Count())" />
+  </Target>
 
 </Project>

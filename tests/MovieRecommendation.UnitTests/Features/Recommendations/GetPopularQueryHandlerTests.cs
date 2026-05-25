@@ -68,7 +68,6 @@ public class GetPopularQueryHandlerTests
                 null, null, It.IsAny<int>(), 20, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Guid> { idB, idA, idC });
 
-        // Repository hydrate returns out-of-order; handler must reorder.
         _movieRepositoryMock
             .Setup(r => r.GetByIdsAsync(
                 It.IsAny<IReadOnlyCollection<Guid>>(),
