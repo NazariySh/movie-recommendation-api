@@ -24,7 +24,7 @@ public class UpdateArtistCommandHandlerTests : IDisposable
         var slugGenerator = new ArtistSlugGenerator(artistRepository);
         var unitOfWork = new UnitOfWork(_dbContext);
 
-        _handler = new UpdateArtistCommandHandler(artistRepository, slugGenerator, unitOfWork);
+        _handler = new UpdateArtistCommandHandler(artistRepository, slugGenerator, new FakeImageMirror(), unitOfWork);
     }
 
     [Fact]

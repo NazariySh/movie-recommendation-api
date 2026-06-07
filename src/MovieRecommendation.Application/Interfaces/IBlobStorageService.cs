@@ -4,6 +4,8 @@ public interface IBlobStorageService
 {
     bool IsConfigured { get; }
 
+    bool OwnsUrl(string url);
+
     Task<string> UploadAsync(
         string path,
         Stream content,

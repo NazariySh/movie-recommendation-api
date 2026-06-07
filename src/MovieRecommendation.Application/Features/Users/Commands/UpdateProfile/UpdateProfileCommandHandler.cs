@@ -24,8 +24,12 @@ public class UpdateProfileCommandHandler : ICommandHandler<UpdateProfileCommand,
 
     public async Task<UserProfileDto> Handle(UpdateProfileCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userManager.FindByIdAsync(request.UserId.ToString())
-            ?? throw new NotFoundException($"User with id {request.UserId} not found");
+        var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+
+        if (user is null)
+        {
+            throw new NotFoundException($"User with id {request.UserId} not found");
+        }
 
         var requestedUsername = request.Model.Username.Trim();
 

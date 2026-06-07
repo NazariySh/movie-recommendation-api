@@ -10,7 +10,9 @@ public class GetTrendingMoviesQueryHandler
     : IQueryHandler<GetTrendingMoviesQuery, IReadOnlyList<MovieDto>>
 {
     private const double HalfLifeDays = 3.0;
-    private const double RatingCentre = 2.5;
+
+    private const double RatingCentre = 5.5;
+
     private const int MinRatingsInWindow = 3;
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(30);
 
@@ -25,10 +27,10 @@ public class GetTrendingMoviesQueryHandler
         _cache = cache;
     }
 
-    public Task<IReadOnlyList<MovieDto>> Handle(GetTrendingMoviesQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MovieDto>> Handle(GetTrendingMoviesQuery request, CancellationToken cancellationToken)
     {
         var key = RecommendationCacheKeys.Trending(request.Type, request.DaysWindow, request.Count, request.Lang);
-        return _cache.GetOrSetAsync(key, ComputeAsync, CacheTtl, cancellationToken);
+        return await _cache.GetOrSetAsync(key, ComputeAsync, CacheTtl, cancellationToken);
 
         async Task<IReadOnlyList<MovieDto>> ComputeAsync(CancellationToken ct)
         {

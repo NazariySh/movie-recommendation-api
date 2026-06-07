@@ -14,9 +14,9 @@ public class GetUserRatingsQueryHandler : IQueryHandler<GetUserRatingsQuery, Pag
         _ratingRepository = ratingRepository;
     }
 
-    public Task<PagedList<UserRatingDto>> Handle(GetUserRatingsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedList<UserRatingDto>> Handle(GetUserRatingsQuery request, CancellationToken cancellationToken)
     {
-        return _ratingRepository.GetUserRatingsAsync(
+        return await _ratingRepository.GetUserRatingsAsync(
             request.UserId,
             request.PageNumber,
             request.PageSize,

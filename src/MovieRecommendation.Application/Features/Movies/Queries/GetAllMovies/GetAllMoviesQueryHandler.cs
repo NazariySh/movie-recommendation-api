@@ -18,10 +18,10 @@ public class GetAllMoviesQueryHandler : IQueryHandler<GetAllMoviesQuery, PagedLi
         _cache = cache;
     }
 
-    public Task<PagedList<MovieListItemDto>> Handle(GetAllMoviesQuery request, CancellationToken cancellationToken)
+    public async Task<PagedList<MovieListItemDto>> Handle(GetAllMoviesQuery request, CancellationToken cancellationToken)
     {
         var key = CacheKey(request);
-        return _cache.GetOrSetAsync(
+        return await _cache.GetOrSetAsync(
             key,
             ct => _movieRepository.GetAllPaginatedAsync(request.Model, request.Lang, ct),
             TimeSpan.FromMinutes(5),
@@ -44,6 +44,7 @@ public class GetAllMoviesQueryHandler : IQueryHandler<GetAllMoviesQuery, PagedLi
             m.YearFrom ?? 0,
             m.YearTo ?? 0,
             m.MinRating ?? 0,
+            m.MaxRating ?? 0,
             m.MinRatingsCount ?? 0,
             m.RuntimeMin ?? 0,
             m.RuntimeMax ?? 0,

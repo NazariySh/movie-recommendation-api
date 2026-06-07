@@ -17,13 +17,13 @@ public class GetDashboardActivityQueryHandler : IQueryHandler<GetDashboardActivi
         _cache = cache;
     }
 
-    public Task<DashboardActivityDto> Handle(GetDashboardActivityQuery request, CancellationToken cancellationToken)
+    public async Task<DashboardActivityDto> Handle(GetDashboardActivityQuery request, CancellationToken cancellationToken)
     {
         var days = request.Days <= 0
             ? DashboardWindows.ActivityDaysDefault
             : Math.Min(request.Days, DashboardWindows.ActivityDaysMax);
 
-        return _cache.GetOrSetAsync(
+        return await _cache.GetOrSetAsync(
             AdminCacheKeys.DashboardActivity(days),
             ct => _repository.GetActivityAsync(days, ct),
             DashboardWindows.ActivityCacheTtl,

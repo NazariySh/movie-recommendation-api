@@ -17,6 +17,7 @@ namespace MovieRecommendation.Infrastructure.Repositories;
 public class MovieRepository : BaseRepository<Movie>, IMovieRepository
 {
     private const string DefaultSortingOption = "popularity";
+    private const string RatingSortOption = "rating";
     private const string FallbackLang = LanguageCodes.Default;
     private const int MaxPageSize = 100;
 
@@ -24,7 +25,6 @@ public class MovieRepository : BaseRepository<Movie>, IMovieRepository
     {
         { DefaultSortingOption, x => x.ReleaseDate! },
         { "newest", x => x.CreatedAt },
-        { "rating", x => x.Ratings.Any() ? x.Ratings.Average(r => r.Score) : 0m },
         { "release_date", x => x.ReleaseDate! },
         { "releasedate", x => x.ReleaseDate! },
         { "title", x => x.OriginalTitle },
@@ -59,30 +59,30 @@ public class MovieRepository : BaseRepository<Movie>, IMovieRepository
         return new PagedList<MovieListItemDto>(items, pageNumber, pageSize, totalCount);
     }
 
-    public Task<MovieDetailDto?> GetDetailByIdAsync(Guid id, string lang, Guid currentUserId, CancellationToken cancellationToken = default)
+    public async Task<MovieDetailDto?> GetDetailByIdAsync(Guid id, string lang, CancellationToken cancellationToken = default)
     {
-        return DbContext.Movies
+        return await DbContext.Movies
             .AsNoTracking()
             .Where(x => x.Id == id && !x.IsDeleted)
-            .ProjectTo<MovieDetailDto>(MapperConfiguration, new { lang, currentUserId })
+            .ProjectTo<MovieDetailDto>(MapperConfiguration, new { lang })
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<MovieDetailDto?> GetDetailByKeyAsync(string key, string lang, Guid currentUserId, CancellationToken cancellationToken = default)
+    public async Task<MovieDetailDto?> GetDetailByKeyAsync(string key, string lang, CancellationToken cancellationToken = default)
     {
-        return DbContext.Movies
+        return await DbContext.Movies
             .AsNoTracking()
             .Where(x => x.Key == key && !x.IsDeleted)
-            .ProjectTo<MovieDetailDto>(MapperConfiguration, new { lang, currentUserId })
+            .ProjectTo<MovieDetailDto>(MapperConfiguration, new { lang })
             .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public Task<MovieDetailDto?> GetDetailByImdbIdAsync(string imdbId, string lang, Guid currentUserId, CancellationToken cancellationToken = default)
+    public async Task<MovieDetailDto?> GetDetailByImdbIdAsync(string imdbId, string lang, CancellationToken cancellationToken = default)
     {
-        return DbContext.Movies
+        return await DbContext.Movies
             .AsNoTracking()
             .Where(x => x.ImdbId == imdbId && !x.IsDeleted)
-            .ProjectTo<MovieDetailDto>(MapperConfiguration, new { lang, currentUserId })
+            .ProjectTo<MovieDetailDto>(MapperConfiguration, new { lang })
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -166,6 +166,24 @@ public class MovieRepository : BaseRepository<Movie>, IMovieRepository
         return DbContext.Movies
             .Where(x => x.ImdbId == imdbId && !x.IsDeleted)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlySet<string>> GetExistingImdbIdsAsync(
+        IReadOnlyCollection<string> imdbIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (imdbIds.Count == 0)
+        {
+            return new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var found = await DbContext.Movies
+            .AsNoTracking()
+            .Where(x => x.ImdbId != null && imdbIds.Contains(x.ImdbId) && !x.IsDeleted)
+            .Select(x => x.ImdbId!)
+            .ToListAsync(cancellationToken);
+
+        return found.ToHashSet(StringComparer.OrdinalIgnoreCase);
     }
 
     public Task<Movie?> GetForEmbeddingAsync(Guid id, CancellationToken cancellationToken = default)
@@ -453,8 +471,13 @@ public class MovieRepository : BaseRepository<Movie>, IMovieRepository
         if (searchDto.MinRating.HasValue)
         {
             var min = searchDto.MinRating.Value;
-            query = query.Where(x =>
-                x.Ratings.Any() && x.Ratings.Average(r => r.Score) >= min);
+            query = query.Where(x => x.RatingsCount > 0 && x.AverageRating >= min);
+        }
+
+        if (searchDto.MaxRating.HasValue)
+        {
+            var max = searchDto.MaxRating.Value;
+            query = query.Where(x => x.RatingsCount > 0 && x.AverageRating <= max);
         }
 
         if (searchDto.MinRatingsCount.HasValue && searchDto.MinRatingsCount.Value > 0)
@@ -485,6 +508,14 @@ public class MovieRepository : BaseRepository<Movie>, IMovieRepository
     private static IQueryable<Movie> ApplySort(IQueryable<Movie> query, string? sortBy, bool descending)
     {
         var key = (sortBy ?? DefaultSortingOption).Trim().ToLower();
+
+        if (key == RatingSortOption)
+        {
+            return descending
+                ? query.OrderByDescending(x => x.AverageRating).ThenByDescending(x => x.RatingsCount)
+                : query.OrderBy(x => x.AverageRating).ThenBy(x => x.RatingsCount);
+        }
+
         var sortExpression = SortingOptions.TryGetValue(key, out var expression)
             ? expression
             : SortingOptions[DefaultSortingOption];

@@ -123,12 +123,12 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasColumnName("role_id");
 
                     b.HasKey("UserId", "RoleId")
-                        .HasName("pk_asp_net_user_roles");
+                        .HasName("pk_user_roles");
 
                     b.HasIndex("RoleId")
-                        .HasDatabaseName("ix_asp_net_user_roles_role_id");
+                        .HasDatabaseName("ix_user_roles_role_id");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("user_roles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
@@ -954,9 +954,7 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasDatabaseName("ix_movie_reviews_parent_review_id");
 
                     b.HasIndex("UserId", "MovieId")
-                        .IsUnique()
-                        .HasDatabaseName("ix_movie_reviews_user_id_movie_id")
-                        .HasFilter("parent_review_id IS NULL");
+                        .HasDatabaseName("ix_movie_reviews_user_id_movie_id");
 
                     b.ToTable("movie_reviews", (string)null);
                 });
@@ -1367,14 +1365,14 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_roles_asp_net_roles_role_id");
+                        .HasConstraintName("fk_user_roles_roles_role_id");
 
                     b.HasOne("MovieRecommendation.Domain.Entities.Users.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_roles_asp_net_users_user_id");
+                        .HasConstraintName("fk_user_roles_users_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>

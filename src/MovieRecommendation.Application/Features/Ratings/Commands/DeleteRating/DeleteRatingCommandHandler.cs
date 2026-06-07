@@ -46,6 +46,7 @@ public class DeleteRatingCommandHandler : ICommandHandler<DeleteRatingCommand>
         _cache.RemoveByPrefix(MovieCacheKeys.DetailFor(request.MovieId));
         _cache.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(request.UserId));
         _cache.RemoveByPrefix(RecommendationCacheKeys.ColdStartFor(request.UserId));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.BecauseForUser(request.UserId));
         _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(request.UserId));
 
         return Unit.Value;

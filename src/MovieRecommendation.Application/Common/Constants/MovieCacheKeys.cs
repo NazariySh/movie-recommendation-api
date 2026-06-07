@@ -6,8 +6,8 @@ public static class MovieCacheKeys
     public const string DetailPrefix = "movies:detail:";
     public const string SimilarPrefix = "movies:similar:";
 
-    public static string Detail(Guid movieId, string lang, Guid currentUserId)
-        => $"movies:detail:{movieId}:{lang}:{currentUserId}";
+    public static string Detail(Guid movieId, string lang)
+        => $"movies:detail:{movieId}:{lang}";
 
     public static string Similar(Guid movieId, int count, string lang)
         => $"movies:similar:{movieId}:{count}:{lang}";

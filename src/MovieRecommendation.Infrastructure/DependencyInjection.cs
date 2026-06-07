@@ -99,6 +99,7 @@ public static class DependencyInjection
         services.AddHttpClient(nameof(AzureBlobStorageService));
 
         services.AddSingleton<IBlobStorageService, AzureBlobStorageService>();
+        services.AddSingleton<IImageMirrorService, ImageMirrorService>();
 
         services.AddSingleton<IMovieLensCsvReader, MovieLensCsvReader>();
         services.AddScoped<IIdentitySeeder, IdentitySeeder>();
@@ -106,6 +107,8 @@ public static class DependencyInjection
         services.AddScoped<IMovieSeeder, MovieSeeder>();
         services.AddScoped<IMovieLensUserSeeder, MovieLensUserSeeder>();
         services.AddScoped<IMovieLensRatingSeeder, MovieLensRatingSeeder>();
+        services.AddScoped<IMovieLensRatingBackfillSeeder, MovieLensRatingBackfillSeeder>();
+        services.AddScoped<ITranslationSeeder, TranslationSeeder>();
         services.AddScoped<DataSeeder>();
 
         return services;

@@ -13,9 +13,9 @@ public class SurveyResponseRepository : BaseRepository<SurveyResponse>, ISurveyR
     {
     }
 
-    public Task<SurveyResponse?> GetLatestForUserAsync(Guid userId, CancellationToken cancellationToken = default)
+    public async Task<SurveyResponse?> GetLatestForUserAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return DbContext.SurveyResponses
+        return await DbContext.SurveyResponses
             .AsNoTracking()
             .Where(s => s.UserId == userId && !s.IsDeleted)
             .OrderByDescending(s => s.CompletedAt)

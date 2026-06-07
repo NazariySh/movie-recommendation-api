@@ -19,8 +19,12 @@ public class DeleteArtistCommandHandler : ICommandHandler<DeleteArtistCommand>
 
     public async Task<Unit> Handle(DeleteArtistCommand request, CancellationToken cancellationToken)
     {
-        var artist = await _artistRepository.GetByIdTrackedAsync(request.Id, cancellationToken)
-            ?? throw new NotFoundException($"Artist with ID {request.Id} not found");
+        var artist = await _artistRepository.GetByIdTrackedAsync(request.Id, cancellationToken);
+
+        if (artist is null)
+        {
+            throw new NotFoundException($"Artist with ID {request.Id} not found");
+        }
 
         if (await _artistRepository.HasMovieCastAsync(request.Id, cancellationToken))
         {

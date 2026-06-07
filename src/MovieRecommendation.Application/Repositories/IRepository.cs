@@ -17,6 +17,8 @@ public interface IRepository<TEntity, TKey>
 
     void Remove(TEntity entity);
 
+    void DetachRange(IEnumerable<TEntity> entities);
+
     Task<TProjection?> GetAsync<TProjection>(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default);

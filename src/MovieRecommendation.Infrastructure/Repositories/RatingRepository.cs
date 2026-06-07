@@ -11,6 +11,8 @@ namespace MovieRecommendation.Infrastructure.Repositories;
 
 public class RatingRepository : BaseRepository<MovieRating>, IRatingRepository
 {
+    private const int MaxPageSize = 100;
+
     public RatingRepository(ApplicationDbContext dbContext, IConfigurationProvider mapperConfiguration)
         : base(dbContext, mapperConfiguration)
     {
@@ -29,6 +31,9 @@ public class RatingRepository : BaseRepository<MovieRating>, IRatingRepository
         string lang,
         CancellationToken cancellationToken = default)
     {
+        var size = Math.Clamp(pageSize <= 0 ? 20 : pageSize, 1, MaxPageSize);
+        var number = pageNumber <= 0 ? 1 : pageNumber;
+
         var query = DbContext.Ratings
             .AsNoTracking()
             .Where(r => r.UserId == userId)
@@ -37,12 +42,12 @@ public class RatingRepository : BaseRepository<MovieRating>, IRatingRepository
         var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
+            .Skip((number - 1) * size)
+            .Take(size)
             .ProjectTo<UserRatingDto>(MapperConfiguration, new { lang })
             .ToListAsync(cancellationToken);
 
-        return new PagedList<UserRatingDto>(items, pageNumber, pageSize, totalCount);
+        return new PagedList<UserRatingDto>(items, number, size, totalCount);
     }
 
     public async Task RecomputeAggregatesAsync(Guid movieId, CancellationToken cancellationToken = default)

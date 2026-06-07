@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using MovieRecommendation.Domain.Settings;
 using MovieRecommendation.Infrastructure.Data.Seeding;
+using MovieRecommendation.Infrastructure.Data.Seeding.Seeders;
 
 namespace MovieRecommendation.API.Extensions;
 
@@ -74,6 +75,20 @@ public static class StartupExtensions
     {
         using var scope = app.Services.CreateScope();
         var seeder = scope.ServiceProvider.GetRequiredService<DataSeeder>();
+        await seeder.SeedAsync();
+    }
+
+    public static async Task SeedTranslationsForDataAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<ITranslationSeeder>();
+        await seeder.SeedAsync();
+    }
+
+    public static async Task SeedMissingMovieLensRatingsAsync(this WebApplication app)
+    {
+        using var scope = app.Services.CreateScope();
+        var seeder = scope.ServiceProvider.GetRequiredService<IMovieLensRatingBackfillSeeder>();
         await seeder.SeedAsync();
     }
 }

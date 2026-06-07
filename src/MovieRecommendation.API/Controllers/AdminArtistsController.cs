@@ -14,14 +14,21 @@ namespace MovieRecommendation.API.Controllers;
 [Authorize(Roles = $"{RoleTypes.Admin},{RoleTypes.Moderator}")]
 public class AdminArtistsController : BaseController
 {
+    private const long MaxUploadBytes = 8 * 1024 * 1024;
+
     public AdminArtistsController(IMediator mediator) : base(mediator)
     {
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateArtistDto request, CancellationToken ct)
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MaxUploadBytes)]
+    public async Task<IActionResult> Create([FromForm] CreateArtistDto request, IFormFile? photo, CancellationToken ct)
     {
-        var id = await Mediator.Send(new CreateArtistCommand(request), ct);
+        await using var photoStream = OpenUpload(photo);
+
+        var id = await Mediator.Send(new CreateArtistCommand(request, AsImageUpload(photo, photoStream)), ct);
+
         return CreatedAtAction(
             actionName: nameof(ArtistsController.GetArtistById),
             controllerName: "Artists",
@@ -30,9 +37,14 @@ public class AdminArtistsController : BaseController
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, UpdateArtistDto request, CancellationToken ct)
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MaxUploadBytes)]
+    public async Task<IActionResult> Update(Guid id, [FromForm] UpdateArtistDto request, IFormFile? photo, CancellationToken ct)
     {
-        await Mediator.Send(new UpdateArtistCommand(id, request), ct);
+        await using var photoStream = OpenUpload(photo);
+
+        await Mediator.Send(new UpdateArtistCommand(id, request, AsImageUpload(photo, photoStream)), ct);
+
         return NoContent();
     }
 

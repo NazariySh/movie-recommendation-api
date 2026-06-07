@@ -28,6 +28,8 @@ public class SearchMoviesDto : PaginationQuery
 
     public decimal? MinRating { get; set; }
 
+    public decimal? MaxRating { get; set; }
+
     public int? MinRatingsCount { get; set; }
 
     public int? RuntimeMin { get; set; }

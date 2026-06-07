@@ -16,6 +16,7 @@ public class UpdateMovieCommandHandler : ICommandHandler<UpdateMovieCommand>
     private readonly IMovieKeyGenerator _keyGenerator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
+    private readonly IImageMirrorService _imageMirror;
     private readonly ICacheService _cache;
 
     public UpdateMovieCommandHandler(
@@ -23,12 +24,14 @@ public class UpdateMovieCommandHandler : ICommandHandler<UpdateMovieCommand>
         IMovieKeyGenerator keyGenerator,
         IUnitOfWork unitOfWork,
         IMapper mapper,
+        IImageMirrorService imageMirror,
         ICacheService cache)
     {
         _movieRepository = movieRepository;
         _keyGenerator = keyGenerator;
         _unitOfWork = unitOfWork;
         _mapper = mapper;
+        _imageMirror = imageMirror;
         _cache = cache;
     }
 
@@ -51,6 +54,12 @@ public class UpdateMovieCommandHandler : ICommandHandler<UpdateMovieCommand>
         _mapper.Map(dto, movie);
         movie.Key = key;
         movie.ReleaseDate = NormalizeToUtc(movie.ReleaseDate);
+        movie.PosterUrl = request.Poster is not null
+            ? await _imageMirror.StoreUploadAsync(request.Poster.Content, request.Poster.ContentType, $"posters/{key}", cancellationToken)
+            : await _imageMirror.MirrorAsync(movie.PosterUrl, $"posters/{key}", cancellationToken);
+        movie.BackdropUrl = request.Backdrop is not null
+            ? await _imageMirror.StoreUploadAsync(request.Backdrop.Content, request.Backdrop.ContentType, $"backdrops/{key}", cancellationToken)
+            : await _imageMirror.MirrorAsync(movie.BackdropUrl, $"backdrops/{key}", cancellationToken);
 
         movie.MovieGenres = dto.GenreIds.Distinct().Select(id => new MovieGenre { GenreId = id }).ToList();
         movie.Translations = dto.Translations.Select(t => new MovieTranslation

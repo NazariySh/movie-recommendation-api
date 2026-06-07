@@ -26,8 +26,7 @@ public class GetMovieByIdQueryHandlerTests
     public async Task Handle_Should_ReturnFromCache_AndUseDetailKey()
     {
         var id = Guid.NewGuid();
-        var userId = Guid.Empty;
-        var expectedKey = MovieCacheKeys.Detail(id, "en", userId);
+        var expectedKey = MovieCacheKeys.Detail(id, "en");
         var dto = new MovieDetailDto { Id = id, Title = "Cached" };
 
         _cacheMock
@@ -38,7 +37,7 @@ public class GetMovieByIdQueryHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(dto);
 
-        var result = await _handler.Handle(new GetMovieByIdQuery(id, "en", userId), CancellationToken.None);
+        var result = await _handler.Handle(new GetMovieByIdQuery(id, "en"), CancellationToken.None);
 
         result.Should().BeSameAs(dto);
     }
@@ -54,7 +53,7 @@ public class GetMovieByIdQueryHandlerTests
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync((MovieDetailDto?)null);
 
-        var act = () => _handler.Handle(new GetMovieByIdQuery(Guid.NewGuid(), "en", Guid.Empty), CancellationToken.None);
+        var act = () => _handler.Handle(new GetMovieByIdQuery(Guid.NewGuid(), "en"), CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
     }

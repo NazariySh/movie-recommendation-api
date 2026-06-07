@@ -7,6 +7,7 @@ using MovieRecommendation.Application.Features.Watchlist.Commands.RemoveWatchlis
 using MovieRecommendation.Application.Features.Watchlist.Commands.UpdateWatchlistStatus;
 using MovieRecommendation.Application.Features.Watchlist.Commands.UpsertWatchlistItem;
 using MovieRecommendation.Application.Features.Watchlist.Queries.GetMyWatchlist;
+using MovieRecommendation.Application.Features.Watchlist.Queries.GetWatchlistItemStatus;
 
 namespace MovieRecommendation.API.Controllers;
 
@@ -25,6 +26,13 @@ public class WatchlistController : BaseController
         var lang = HttpContext.GetRequestLanguage();
         var page = await Mediator.Send(new GetMyWatchlistQuery(User.GetId(), query, lang), ct);
         return Ok(page);
+    }
+
+    [HttpGet("{movieId:guid}")]
+    public async Task<IActionResult> GetStatus(Guid movieId, CancellationToken ct)
+    {
+        var status = await Mediator.Send(new GetWatchlistItemStatusQuery(User.GetId(), movieId), ct);
+        return Ok(status);
     }
 
     [HttpPost]

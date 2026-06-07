@@ -3,4 +3,4 @@ using MovieRecommendation.Application.DTOs.Movies;
 
 namespace MovieRecommendation.Application.Features.Movies.Queries.GetMovieByKey;
 
-public record GetMovieByKeyQuery(string MovieKey, string Lang, Guid CurrentUserId) : IQuery<MovieDetailDto>;
+public record GetMovieByKeyQuery(string MovieKey, string Lang) : IQuery<MovieDetailDto>;

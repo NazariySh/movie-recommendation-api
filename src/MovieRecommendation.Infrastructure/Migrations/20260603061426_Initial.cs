@@ -318,30 +318,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AspNetUserRoles",
-                columns: table => new
-                {
-                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    role_id = table.Column<Guid>(type: "uuid", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("pk_asp_net_user_roles", x => new { x.user_id, x.role_id });
-                    table.ForeignKey(
-                        name: "fk_asp_net_user_roles_asp_net_roles_role_id",
-                        column: x => x.role_id,
-                        principalTable: "roles",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_asp_net_user_roles_asp_net_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ml_predictions",
                 columns: table => new
                 {
@@ -556,6 +532,30 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "user_roles",
+                columns: table => new
+                {
+                    user_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    role_id = table.Column<Guid>(type: "uuid", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("pk_user_roles", x => new { x.user_id, x.role_id });
+                    table.ForeignKey(
+                        name: "fk_user_roles_roles_role_id",
+                        column: x => x.role_id,
+                        principalTable: "roles",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "fk_user_roles_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "user_tokens",
                 columns: table => new
                 {
@@ -668,11 +668,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
                     { new Guid("a1d3c7e0-0000-0000-0000-000000000002"), "a1d3c7e0-0000-0000-0000-000000000002", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "Moderator", "MODERATOR" },
                     { new Guid("a1d3c7e0-0000-0000-0000-000000000003"), "a1d3c7e0-0000-0000-0000-000000000003", new DateTime(2024, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc), "User", "USER" }
                 });
-
-            migrationBuilder.CreateIndex(
-                name: "ix_asp_net_user_roles_role_id",
-                table: "AspNetUserRoles",
-                column: "role_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_genre_translations_language_code",
@@ -855,6 +850,11 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 column: "user_id");
 
             migrationBuilder.CreateIndex(
+                name: "ix_user_roles_role_id",
+                table: "user_roles",
+                column: "role_id");
+
+            migrationBuilder.CreateIndex(
                 name: "EmailIndex",
                 table: "users",
                 column: "normalized_email");
@@ -901,9 +901,6 @@ namespace MovieRecommendation.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "AspNetUserRoles");
-
             migrationBuilder.DropTable(
                 name: "genre_translations");
 
@@ -953,6 +950,9 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 name: "user_refresh_tokens");
 
             migrationBuilder.DropTable(
+                name: "user_roles");
+
+            migrationBuilder.DropTable(
                 name: "user_tokens");
 
             migrationBuilder.DropTable(
@@ -968,10 +968,10 @@ namespace MovieRecommendation.Infrastructure.Migrations
                 name: "movie_reviews");
 
             migrationBuilder.DropTable(
-                name: "roles");
+                name: "genres");
 
             migrationBuilder.DropTable(
-                name: "genres");
+                name: "roles");
 
             migrationBuilder.DropTable(
                 name: "movies");

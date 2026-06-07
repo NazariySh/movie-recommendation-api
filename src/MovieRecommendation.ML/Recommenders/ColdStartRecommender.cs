@@ -20,15 +20,25 @@ public class ColdStartRecommender
     }
 
     public async Task<List<ScoredMovie>> GetColdStartRecommendationsAsync(
-        IEnumerable<int> genreIds, int limit = 20, CancellationToken ct = default)
+        IEnumerable<int> genreIds,
+        int limit = 20,
+        CancellationToken ct = default,
+        IReadOnlyCollection<Guid>? excludedMovieIds = null)
     {
         var ids = genreIds.ToList();
         var hasGenreFilter = ids.Count > 0;
         var minVotes = (decimal)_settings.BayesianMinVotes;
         var globalMean = (decimal)_settings.BayesianGlobalMean;
 
-        var query = _db.Movies
-            .Where(m => !hasGenreFilter || m.MovieGenres.Any(g => ids.Contains(g.GenreId)))
+        var movies = _db.Movies
+            .Where(m => !hasGenreFilter || m.MovieGenres.Any(g => ids.Contains(g.GenreId)));
+
+        if (excludedMovieIds is { Count: > 0 } excluded)
+        {
+            movies = movies.Where(m => !excluded.Contains(m.Id));
+        }
+
+        var query = movies
             .Select(m => new
             {
                 m.Id,

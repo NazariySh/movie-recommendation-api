@@ -38,8 +38,12 @@ public class UploadAvatarCommandHandler : ICommandHandler<UploadAvatarCommand, U
                 "Avatar uploads are unavailable: blob storage is not configured.");
         }
 
-        var user = await _userManager.FindByIdAsync(request.UserId.ToString())
-            ?? throw new NotFoundException($"User with id {request.UserId} not found");
+        var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+
+        if (user is null)
+        {
+            throw new NotFoundException($"User with id {request.UserId} not found");
+        }
 
         if (!AllowedContentTypes.TryGetValue(request.ContentType, out var extension))
         {

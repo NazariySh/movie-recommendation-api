@@ -19,9 +19,7 @@ internal class MovieReviewEntityConfiguration : BaseEntityConfiguration<MovieRev
         builder.Property(x => x.Score)
             .HasPrecision(5, 2);
 
-        builder.HasIndex(x => new { x.UserId, x.MovieId })
-            .IsUnique()
-            .HasFilter("parent_review_id IS NULL");
+        builder.HasIndex(x => new { x.UserId, x.MovieId });
 
         builder.HasOne(x => x.User)
             .WithMany()

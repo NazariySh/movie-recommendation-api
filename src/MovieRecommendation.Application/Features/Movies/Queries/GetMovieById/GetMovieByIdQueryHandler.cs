@@ -20,10 +20,10 @@ public class GetMovieByIdQueryHandler : IQueryHandler<GetMovieByIdQuery, MovieDe
 
     public async Task<MovieDetailDto> Handle(GetMovieByIdQuery request, CancellationToken cancellationToken)
     {
-        var key = MovieCacheKeys.Detail(request.Id, request.Lang, request.CurrentUserId);
+        var key = MovieCacheKeys.Detail(request.Id, request.Lang);
         var movie = await _cache.GetOrSetAsync(
             key,
-            ct => _movieRepository.GetDetailByIdAsync(request.Id, request.Lang, request.CurrentUserId, ct),
+            ct => _movieRepository.GetDetailByIdAsync(request.Id, request.Lang, ct),
             TimeSpan.FromMinutes(30),
             cancellationToken);
 

@@ -31,6 +31,10 @@ public interface IArtistRepository : IRepository<Person>
         IReadOnlyCollection<string> slugs,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyDictionary<string, Person>> GetByNamesAsync(
+        IReadOnlyCollection<string> names,
+        CancellationToken cancellationToken = default);
+
     Task<Person?> GetByIdTrackedAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ArtistSuggestionDto>> SearchSuggestionsAsync(

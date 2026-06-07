@@ -39,6 +39,7 @@ public class RemoveWatchlistItemCommandHandler : ICommandHandler<RemoveWatchlist
         _watchlistRepository.Remove(item);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         _cache.RemoveByPrefix(RecommendationCacheKeys.ForYouFor(request.UserId));
+        _cache.RemoveByPrefix(RecommendationCacheKeys.BecauseForUser(request.UserId));
         _cache.RemoveByPrefix(UserCacheKeys.StatsForUser(request.UserId));
         return Unit.Value;
     }

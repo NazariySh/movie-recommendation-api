@@ -15,17 +15,14 @@ public class ColdStartRecommenderTests
     {
         using var db = TestDbContextFactory.Create();
 
-        // Many votes, average 8.5 → Bayesian: (1000*8.5 + 10*7) / 1010 = 8.485
         var blockbuster = TestData.Movie(title: "Blockbuster", key: "block");
         blockbuster.AverageRating = 8.5m;
         blockbuster.RatingsCount = 1000;
 
-        // One vote of 10 → Bayesian: (1*10 + 10*7) / 11 = 7.27 — should rank below blockbuster
         var luckyOne = TestData.Movie(title: "Lucky", key: "lucky");
         luckyOne.AverageRating = 10m;
         luckyOne.RatingsCount = 1;
 
-        // Average movie
         var midPack = TestData.Movie(title: "MidPack", key: "midpack");
         midPack.AverageRating = 7.0m;
         midPack.RatingsCount = 200;
@@ -76,12 +73,10 @@ public class ColdStartRecommenderTests
     {
         using var db = TestDbContextFactory.Create();
 
-        // 5 votes, average 10 → Bayesian: (5*10 + 10*7) / 15 = 8.0
         var lowVoteHigh = TestData.Movie(title: "LowVoteHigh", key: "low");
         lowVoteHigh.AverageRating = 10m;
         lowVoteHigh.RatingsCount = 5;
 
-        // 500 votes, average 8.4 → Bayesian: (500*8.4 + 10*7) / 510 = 8.3725
         var highVoteHigh = TestData.Movie(title: "HighVoteHigh", key: "high");
         highVoteHigh.AverageRating = 8.4m;
         highVoteHigh.RatingsCount = 500;

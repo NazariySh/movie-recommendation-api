@@ -26,7 +26,7 @@ public static class RecommendationCacheKeys
     public static string Because(Guid movieId, Guid currentUserId, int count, string lang)
     {
         var userPart = currentUserId == Guid.Empty ? "anon" : currentUserId.ToString();
-        return $"recommendations:because:{movieId}:{userPart}:{count}:{lang}";
+        return $"recommendations:because:{userPart}:{movieId}:{count}:{lang}";
     }
 
     public static string Trending(TitleType? type, int daysWindow, int count, string lang)
@@ -35,4 +35,6 @@ public static class RecommendationCacheKeys
     public static string ForYouFor(Guid userId) => $"recommendations:for-you:{userId}";
 
     public static string ColdStartFor(Guid userId) => $"recommendations:cold-start:{userId}";
+
+    public static string BecauseForUser(Guid userId) => $"recommendations:because:{userId}";
 }

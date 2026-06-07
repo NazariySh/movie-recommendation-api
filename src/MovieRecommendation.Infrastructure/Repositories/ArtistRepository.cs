@@ -24,7 +24,9 @@ public class ArtistRepository : BaseRepository<Person>, IArtistRepository
         SearchArtistsDto searchDto,
         CancellationToken cancellationToken = default)
     {
-        var query = DbContext.People.AsNoTracking().Where(p => !p.IsDeleted);
+        var query = DbContext.People
+            .AsNoTracking()
+            .Where(p => !p.IsDeleted);
 
         var search = searchDto.Search?.Trim();
         var hasSearch = !string.IsNullOrWhiteSpace(search);
@@ -255,6 +257,27 @@ public class ArtistRepository : BaseRepository<Person>, IArtistRepository
         return rows
             .GroupBy(p => p.Slug)
             .ToDictionary(g => g.Key, g => g.First());
+    }
+
+    public async Task<IReadOnlyDictionary<string, Person>> GetByNamesAsync(
+        IReadOnlyCollection<string> names,
+        CancellationToken cancellationToken = default)
+    {
+        if (names.Count == 0)
+        {
+            return new Dictionary<string, Person>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        var lowered = names.Select(n => n.ToLower()).Distinct().ToList();
+
+        var rows = await DbContext.People
+            .AsNoTracking()
+            .Where(p => lowered.Contains(p.Name.ToLower()) && !p.IsDeleted)
+            .ToListAsync(cancellationToken);
+
+        return rows
+            .GroupBy(p => p.Name, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
     }
 
     public Task<Person?> GetByIdTrackedAsync(Guid id, CancellationToken cancellationToken = default)

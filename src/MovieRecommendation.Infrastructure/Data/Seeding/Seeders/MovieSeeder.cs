@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using MovieRecommendation.Application.DTOs.Movies;
 using MovieRecommendation.Application.Features.Movies.Commands.ImportMovieFromImdb;
+using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Exceptions;
 using MovieRecommendation.Infrastructure.Data.Seeding.Constants;
 using MovieRecommendation.Infrastructure.Data.Seeding.MovieLens;
@@ -11,11 +12,13 @@ namespace MovieRecommendation.Infrastructure.Data.Seeding.Seeders;
 public sealed class MovieSeeder : IMovieSeeder
 {
     private readonly IMediator _mediator;
+    private readonly IMovieRepository _movieRepository;
     private readonly ILogger<MovieSeeder> _logger;
 
-    public MovieSeeder(IMediator mediator, ILogger<MovieSeeder> logger)
+    public MovieSeeder(IMediator mediator, IMovieRepository movieRepository, ILogger<MovieSeeder> logger)
     {
         _mediator = mediator;
+        _movieRepository = movieRepository;
         _logger = logger;
     }
 
@@ -26,18 +29,29 @@ public sealed class MovieSeeder : IMovieSeeder
             .Take(maxMovies)
             .ToList();
 
-        _logger.LogInformation("Importing {Count} movies via TMDb enrichment...", candidates.Count);
+        var imdbIds = candidates
+            .Select(c => c.ImdbId!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var existingImdbIds = await _movieRepository.GetExistingImdbIdsAsync(imdbIds, cancellationToken);
+
+        var pending = candidates.Where(c => !existingImdbIds.Contains(c.ImdbId!)).ToList();
+        var alreadyInDb = candidates.Count - pending.Count;
+
+        _logger.LogInformation(
+            "Importing {Count} movies via TMDb enrichment ({AlreadyInDb} already in DB, skipped)...",
+            pending.Count, alreadyInDb);
 
         var imported = 0;
         var skipped = 0;
         var missing = 0;
         var failed = 0;
 
-        for (var index = 0; index < candidates.Count; index++)
+        for (var index = 0; index < pending.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var record = candidates[index];
+            var record = pending[index];
             var outcome = await ImportSingleAsync(record, cancellationToken);
 
             switch (outcome)
@@ -52,13 +66,13 @@ public sealed class MovieSeeder : IMovieSeeder
             {
                 _logger.LogInformation(
                     "Progress: {Done}/{Total} (imported={I} skipped={S} missing={M} failed={F})",
-                    index + 1, candidates.Count, imported, skipped, missing, failed);
+                    index + 1, pending.Count, imported, skipped, missing, failed);
             }
         }
 
         _logger.LogInformation(
-            "Movie seeding complete. Imported={Imported} Skipped={Skipped} Missing={Missing} Failed={Failed}",
-            imported, skipped, missing, failed);
+            "Movie seeding complete. Imported={Imported} Skipped={Skipped} AlreadyInDb={AlreadyInDb} Missing={Missing} Failed={Failed}",
+            imported, skipped, alreadyInDb, missing, failed);
     }
 
     private async Task<ImportOutcome> ImportSingleAsync(MovieLensRecord record, CancellationToken cancellationToken)

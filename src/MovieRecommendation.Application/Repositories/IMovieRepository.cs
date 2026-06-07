@@ -13,11 +13,11 @@ public interface IMovieRepository : IRepository<Movie>
         string lang,
         CancellationToken cancellationToken = default);
 
-    Task<MovieDetailDto?> GetDetailByIdAsync(Guid id, string lang, Guid currentUserId, CancellationToken cancellationToken = default);
+    Task<MovieDetailDto?> GetDetailByIdAsync(Guid id, string lang, CancellationToken cancellationToken = default);
 
-    Task<MovieDetailDto?> GetDetailByKeyAsync(string key, string lang, Guid currentUserId, CancellationToken cancellationToken = default);
+    Task<MovieDetailDto?> GetDetailByKeyAsync(string key, string lang, CancellationToken cancellationToken = default);
 
-    Task<MovieDetailDto?> GetDetailByImdbIdAsync(string imdbId, string lang, Guid currentUserId, CancellationToken cancellationToken = default);
+    Task<MovieDetailDto?> GetDetailByImdbIdAsync(string imdbId, string lang, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<MovieDto>> GetByIdsAsync(
         IReadOnlyCollection<Guid> ids,
@@ -38,6 +38,10 @@ public interface IMovieRepository : IRepository<Movie>
     Task<Movie?> GetTrackedByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<Movie?> GetTrackedByImdbIdAsync(string imdbId, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlySet<string>> GetExistingImdbIdsAsync(
+        IReadOnlyCollection<string> imdbIds,
+        CancellationToken cancellationToken = default);
 
     Task<Movie?> GetForEmbeddingAsync(Guid id, CancellationToken cancellationToken = default);
 

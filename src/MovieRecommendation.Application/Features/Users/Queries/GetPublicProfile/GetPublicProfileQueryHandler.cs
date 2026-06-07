@@ -16,8 +16,12 @@ public class GetPublicProfileQueryHandler : IQueryHandler<GetPublicProfileQuery,
 
     public async Task<PublicProfileDto> Handle(GetPublicProfileQuery request, CancellationToken cancellationToken)
     {
-        var profile = await _userRepository.GetPublicProfileAsync(request.UserId, cancellationToken)
-            ?? throw new NotFoundException($"User {request.UserId} not found");
+        var profile = await _userRepository.GetPublicProfileAsync(request.UserId, cancellationToken);
+
+        if (profile is null)
+        {
+            throw new NotFoundException($"User {request.UserId} not found");
+        }
 
         return profile;
     }

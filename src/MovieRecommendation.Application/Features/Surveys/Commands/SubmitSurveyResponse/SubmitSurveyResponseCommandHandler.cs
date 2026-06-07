@@ -41,8 +41,12 @@ public class SubmitSurveyResponseCommandHandler : ICommandHandler<SubmitSurveyRe
 
     public async Task<Unit> Handle(SubmitSurveyResponseCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userManager.FindByIdAsync(request.UserId.ToString())
-            ?? throw new NotFoundException($"User with id {request.UserId} not found");
+        var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+
+        if (user is null)
+        {
+            throw new NotFoundException($"User with id {request.UserId} not found");
+        }
 
         var schema = _surveyOptions.CurrentValue;
         if (request.Request.Version != schema.Version)

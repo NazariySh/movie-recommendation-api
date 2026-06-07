@@ -73,6 +73,43 @@ public class TmdbMovieProvider : IExternalMovieDataProvider
         return null;
     }
 
+    public async Task<ExternalTranslationResult?> FetchTranslationAsync(
+        int tmdbId,
+        TitleType type,
+        string languageCode,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(_settings.AccessToken))
+        {
+            _logger.LogDebug("TMDb skipped: AccessToken not configured");
+            return null;
+        }
+
+        var path = type == TitleType.Series
+            ? $"tv/{tmdbId}/translations"
+            : $"movie/{tmdbId}/translations";
+
+        var response = await GetAsync<TmdbTranslations>(path, cancellationToken);
+
+        var match = response?.Translations?.FirstOrDefault(t =>
+            string.Equals(t.Iso6391, languageCode, StringComparison.OrdinalIgnoreCase));
+
+        if (match?.Data is null)
+        {
+            return null;
+        }
+
+        var title = string.IsNullOrWhiteSpace(match.Data.Title) ? match.Data.Name : match.Data.Title;
+
+        return new ExternalTranslationResult
+        {
+            LanguageCode = languageCode,
+            Title = string.IsNullOrWhiteSpace(title) ? null : title!.Trim(),
+            Overview = string.IsNullOrWhiteSpace(match.Data.Overview) ? null : match.Data.Overview,
+            Tagline = string.IsNullOrWhiteSpace(match.Data.Tagline) ? null : match.Data.Tagline,
+        };
+    }
+
     private async Task<ExternalMovieResult?> BuildMovieAsync(int tmdbId, string imdbId, CancellationToken ct)
     {
         var detail = await GetAsync<TmdbMovieDetail>($"movie/{tmdbId}?append_to_response=credits,videos", ct);
@@ -443,6 +480,30 @@ public class TmdbMovieProvider : IExternalMovieDataProvider
     private sealed class TmdbVideos
     {
         public List<TmdbVideo>? Results { get; set; }
+    }
+
+    private sealed class TmdbTranslations
+    {
+        public List<TmdbTranslationEntry>? Translations { get; set; }
+    }
+
+    private sealed class TmdbTranslationEntry
+    {
+        [JsonPropertyName("iso_639_1")]
+        public string? Iso6391 { get; set; }
+
+        public TmdbTranslationData? Data { get; set; }
+    }
+
+    private sealed class TmdbTranslationData
+    {
+        public string? Title { get; set; }
+
+        public string? Name { get; set; }
+
+        public string? Overview { get; set; }
+
+        public string? Tagline { get; set; }
     }
 
     private sealed class TmdbVideo

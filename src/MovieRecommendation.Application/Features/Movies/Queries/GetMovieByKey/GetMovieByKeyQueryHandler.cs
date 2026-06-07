@@ -19,7 +19,6 @@ public class GetMovieByKeyQueryHandler : IQueryHandler<GetMovieByKeyQuery, Movie
         var movie = await _movieRepository.GetDetailByKeyAsync(
             request.MovieKey,
             request.Lang,
-            request.CurrentUserId,
             cancellationToken);
 
         if (movie is null)

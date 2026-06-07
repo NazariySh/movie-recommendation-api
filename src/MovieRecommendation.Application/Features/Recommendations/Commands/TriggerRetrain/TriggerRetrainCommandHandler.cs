@@ -18,15 +18,35 @@ public class TriggerRetrainCommandHandler : ICommandHandler<TriggerRetrainComman
         _logger = logger;
     }
 
-    public Task<RetrainResultDto> Handle(TriggerRetrainCommand request, CancellationToken cancellationToken)
+    public async Task<RetrainResultDto> Handle(TriggerRetrainCommand request, CancellationToken cancellationToken)
     {
         _logger.LogInformation(
             "Actor {ActorUserId} triggered ML retrain (wait={Wait})",
             request.ActorUserId,
             request.WaitForCompletion);
 
-        return request.WaitForCompletion
-            ? _orchestrator.RunAsync(request.ActorUserId, cancellationToken)
-            : Task.FromResult(_orchestrator.Enqueue(request.ActorUserId));
+        if (request.WaitForCompletion)
+        {
+            var result = await _orchestrator.RunAsync(request.ActorUserId, cancellationToken);
+
+            _logger.LogInformation(
+                "ML retrain completed for Actor {ActorUserId} with JobId {JobId} and Status {Status}",
+                request.ActorUserId,
+                result.JobId,
+                result.Status);
+
+            return result;
+        }
+        else
+        {
+            var result = _orchestrator.Enqueue(request.ActorUserId);
+
+            _logger.LogInformation(
+                "ML retrain enqueued for Actor {ActorUserId} with JobId {JobId}",
+                request.ActorUserId,
+                result.JobId);
+
+            return result;
+        }
     }
 }

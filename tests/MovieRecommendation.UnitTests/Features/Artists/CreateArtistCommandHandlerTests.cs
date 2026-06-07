@@ -23,7 +23,7 @@ public class CreateArtistCommandHandlerTests : IDisposable
         var slugGenerator = new ArtistSlugGenerator(artistRepository);
         var unitOfWork = new UnitOfWork(_dbContext);
 
-        _handler = new CreateArtistCommandHandler(artistRepository, slugGenerator, unitOfWork);
+        _handler = new CreateArtistCommandHandler(artistRepository, slugGenerator, new FakeImageMirror(), unitOfWork);
     }
 
     [Fact]

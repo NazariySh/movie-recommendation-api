@@ -1,5 +1,6 @@
 using MovieRecommendation.Application.Abstractions.Messaging;
 using MovieRecommendation.Application.Features.Artists.Common;
+using MovieRecommendation.Application.Interfaces;
 using MovieRecommendation.Application.Repositories;
 using MovieRecommendation.Domain.Entities.Movies;
 
@@ -9,15 +10,18 @@ public class CreateArtistCommandHandler : ICommandHandler<CreateArtistCommand, G
 {
     private readonly IArtistRepository _artistRepository;
     private readonly IArtistSlugGenerator _slugGenerator;
+    private readonly IImageMirrorService _imageMirror;
     private readonly IUnitOfWork _unitOfWork;
 
     public CreateArtistCommandHandler(
         IArtistRepository artistRepository,
         IArtistSlugGenerator slugGenerator,
+        IImageMirrorService imageMirror,
         IUnitOfWork unitOfWork)
     {
         _artistRepository = artistRepository;
         _slugGenerator = slugGenerator;
+        _imageMirror = imageMirror;
         _unitOfWork = unitOfWork;
     }
 
@@ -32,7 +36,9 @@ public class CreateArtistCommandHandler : ICommandHandler<CreateArtistCommand, G
         {
             Slug = slug,
             Name = request.Model.Name,
-            PhotoUrl = request.Model.PhotoUrl,
+            PhotoUrl = request.Photo is not null
+                ? await _imageMirror.StoreUploadAsync(request.Photo.Content, request.Photo.ContentType, $"artists/{slug}", cancellationToken)
+                : await _imageMirror.MirrorAsync(request.Model.PhotoUrl, $"artists/{slug}", cancellationToken),
             Birthday = request.Model.Birthday,
             DateOfDeath = request.Model.DateOfDeath,
             PlaceOfBirth = request.Model.PlaceOfBirth,

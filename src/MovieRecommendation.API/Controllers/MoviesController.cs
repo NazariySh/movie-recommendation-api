@@ -55,8 +55,7 @@ public class MoviesController : BaseController
     public async Task<IActionResult> GetByImdbId(string imdbId, CancellationToken cancellationToken)
     {
         var lang = HttpContext.GetRequestLanguage();
-        var userId = User.GetIdOrDefault() ?? Guid.Empty;
-        var movie = await Mediator.Send(new GetMovieByImdbIdQuery(imdbId, lang, userId), cancellationToken);
+        var movie = await Mediator.Send(new GetMovieByImdbIdQuery(imdbId, lang), cancellationToken);
         return Ok(movie);
     }
 
@@ -64,8 +63,7 @@ public class MoviesController : BaseController
     public async Task<IActionResult> GetMovieById(Guid id, CancellationToken cancellationToken)
     {
         var lang = HttpContext.GetRequestLanguage();
-        var userId = User.GetIdOrDefault() ?? Guid.Empty;
-        var movie = await Mediator.Send(new GetMovieByIdQuery(id, lang, userId), cancellationToken);
+        var movie = await Mediator.Send(new GetMovieByIdQuery(id, lang), cancellationToken);
         return Ok(movie);
     }
 
@@ -81,8 +79,7 @@ public class MoviesController : BaseController
     public async Task<IActionResult> GetMovieByKey(string key, CancellationToken cancellationToken)
     {
         var lang = HttpContext.GetRequestLanguage();
-        var userId = User.GetIdOrDefault() ?? Guid.Empty;
-        var movie = await Mediator.Send(new GetMovieByKeyQuery(key, lang, userId), cancellationToken);
+        var movie = await Mediator.Send(new GetMovieByKeyQuery(key, lang), cancellationToken);
         return Ok(movie);
     }
 

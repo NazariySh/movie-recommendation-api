@@ -69,6 +69,7 @@ public class ApplicationDbContext : IdentityDbContext<User, Role, Guid>
         builder.Entity<IdentityUserLogin<Guid>>().ToTable("user_logins");
         builder.Entity<IdentityUserToken<Guid>>().ToTable("user_tokens");
         builder.Entity<IdentityRoleClaim<Guid>>().ToTable("role_claims");
+        builder.Entity<IdentityUserRole<Guid>>().ToTable("user_roles");
 
         ApplySoftDeleteFilters(builder);
     }

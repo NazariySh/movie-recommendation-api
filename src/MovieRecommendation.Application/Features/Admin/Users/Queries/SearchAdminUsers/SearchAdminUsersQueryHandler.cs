@@ -14,8 +14,8 @@ public class SearchAdminUsersQueryHandler : IQueryHandler<SearchAdminUsersQuery,
         _userRepository = userRepository;
     }
 
-    public Task<PagedList<AdminUserListItemDto>> Handle(SearchAdminUsersQuery request, CancellationToken cancellationToken)
+    public async Task<PagedList<AdminUserListItemDto>> Handle(SearchAdminUsersQuery request, CancellationToken cancellationToken)
     {
-        return _userRepository.SearchAdminAsync(request.Query, cancellationToken);
+        return await _userRepository.SearchAdminAsync(request.Query, cancellationToken);
     }
 }

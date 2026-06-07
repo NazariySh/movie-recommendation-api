@@ -12,9 +12,9 @@ public class SeedingSettings
 
     public string? AdminPassword { get; set; }
 
-    public int MovieCount { get; set; } = 5000;
+    public int MovieCount { get; set; } = 9742;
 
-    public int MovieLensUserCount { get; set; } = 1000;
+    public int MovieLensUserCount { get; set; } = 610;
 
-    public int MaxRatingsPerUser { get; set; } = 200;
+    public int MaxRatingsPerUser { get; set; } = 5000;
 }

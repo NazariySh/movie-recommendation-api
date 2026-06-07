@@ -14,8 +14,8 @@ public class GetAllArtistsQueryHandler : IQueryHandler<GetAllArtistsQuery, Paged
         _artistRepository = artistRepository;
     }
 
-    public Task<PagedList<ArtistDto>> Handle(GetAllArtistsQuery request, CancellationToken cancellationToken)
+    public async Task<PagedList<ArtistDto>> Handle(GetAllArtistsQuery request, CancellationToken cancellationToken)
     {
-        return _artistRepository.GetAllPaginatedAsync(request.Model, cancellationToken);
+        return await _artistRepository.GetAllPaginatedAsync(request.Model, cancellationToken);
     }
 }

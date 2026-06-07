@@ -20,8 +20,12 @@ public class GetMyProfileQueryHandler : IQueryHandler<GetMyProfileQuery, UserPro
 
     public async Task<UserProfileDto> Handle(GetMyProfileQuery request, CancellationToken cancellationToken)
     {
-        var user = await _userManager.FindByIdAsync(request.UserId.ToString())
-            ?? throw new NotFoundException($"User with id {request.UserId} not found");
+        var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+
+        if (user is null)
+        {
+            throw new NotFoundException($"User with id {request.UserId} not found");
+        }
 
         var roles = await _userManager.GetRolesAsync(user);
         var dto = _mapper.Map<UserProfileDto>(user);

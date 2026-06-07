@@ -35,6 +35,7 @@ public class UpdateMovieCommandHandlerTests : IDisposable
             keyGenerator,
             unitOfWork,
             TestMapperFactory.Create(),
+            new FakeImageMirror(),
             _cacheMock.Object);
     }
 

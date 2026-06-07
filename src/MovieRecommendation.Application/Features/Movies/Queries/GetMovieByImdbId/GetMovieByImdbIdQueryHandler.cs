@@ -19,7 +19,6 @@ public class GetMovieByImdbIdQueryHandler : IQueryHandler<GetMovieByImdbIdQuery,
         var movie = await _movieRepository.GetDetailByImdbIdAsync(
             request.ImdbId,
             request.Lang,
-            request.CurrentUserId,
             cancellationToken);
 
         if (movie is null)

@@ -13,7 +13,7 @@ using Pgvector;
 namespace MovieRecommendation.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260524134405_Initial")]
+    [Migration("20260603061426_Initial")]
     partial class Initial
     {
         /// <inheritdoc />
@@ -126,12 +126,12 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasColumnName("role_id");
 
                     b.HasKey("UserId", "RoleId")
-                        .HasName("pk_asp_net_user_roles");
+                        .HasName("pk_user_roles");
 
                     b.HasIndex("RoleId")
-                        .HasDatabaseName("ix_asp_net_user_roles_role_id");
+                        .HasDatabaseName("ix_user_roles_role_id");
 
-                    b.ToTable("AspNetUserRoles", (string)null);
+                    b.ToTable("user_roles", (string)null);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
@@ -1370,14 +1370,14 @@ namespace MovieRecommendation.Infrastructure.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_roles_asp_net_roles_role_id");
+                        .HasConstraintName("fk_user_roles_roles_role_id");
 
                     b.HasOne("MovieRecommendation.Domain.Entities.Users.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_asp_net_user_roles_asp_net_users_user_id");
+                        .HasConstraintName("fk_user_roles_users_user_id");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>

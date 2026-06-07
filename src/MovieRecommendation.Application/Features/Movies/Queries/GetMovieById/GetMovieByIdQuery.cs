@@ -3,4 +3,4 @@ using MovieRecommendation.Application.DTOs.Movies;
 
 namespace MovieRecommendation.Application.Features.Movies.Queries.GetMovieById;
 
-public record GetMovieByIdQuery(Guid Id, string Lang, Guid CurrentUserId) : IQuery<MovieDetailDto>;
+public record GetMovieByIdQuery(Guid Id, string Lang) : IQuery<MovieDetailDto>;

@@ -17,9 +17,9 @@ public class GetDashboardSummaryQueryHandler : IQueryHandler<GetDashboardSummary
         _cache = cache;
     }
 
-    public Task<DashboardSummaryDto> Handle(GetDashboardSummaryQuery request, CancellationToken cancellationToken)
+    public async Task<DashboardSummaryDto> Handle(GetDashboardSummaryQuery request, CancellationToken cancellationToken)
     {
-        return _cache.GetOrSetAsync(
+        return await _cache.GetOrSetAsync(
             AdminCacheKeys.DashboardSummary,
             ct => _repository.GetSummaryAsync(ct),
             DashboardWindows.SummaryCacheTtl,

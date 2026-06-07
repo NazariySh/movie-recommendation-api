@@ -44,7 +44,13 @@ public class HybridRecommender : IRecommendationEngine
             return await ColdStartFallbackAsync(userId, limit, ct);
         }
 
-        var tasteVector = await BuildTasteVectorAsync(userId, ct);
+        var builtTaste = await BuildTasteVectorAsync(userId, ct);
+        if (builtTaste is null)
+        {
+            return await ColdStartFallbackAsync(userId, limit, ct);
+        }
+
+        Vector tasteVector = builtTaste;
 
         var excludedSet = await GetUserExclusionsAsync(userId, ct);
 
@@ -197,7 +203,9 @@ public class HybridRecommender : IRecommendationEngine
             .Select(g => g.GenreId)
             .ToListAsync(ct);
 
-        return await _coldStart.GetColdStartRecommendationsAsync(genreIds, limit, ct);
+        var excluded = await GetUserExclusionsAsync(userId, ct);
+
+        return await _coldStart.GetColdStartRecommendationsAsync(genreIds, limit, ct, excluded);
     }
 
     private async Task<HashSet<Guid>> GetUserExclusionsAsync(Guid userId, CancellationToken ct)
@@ -214,7 +222,7 @@ public class HybridRecommender : IRecommendationEngine
         return excludedMovieIds.ToHashSet();
     }
 
-    private async Task<Vector> BuildTasteVectorAsync(Guid userId, CancellationToken ct)
+    private async Task<Vector?> BuildTasteVectorAsync(Guid userId, CancellationToken ct)
     {
         var likedThreshold = (decimal)_settings.LikedThreshold;
         var dislikedThreshold = (decimal)_settings.DislikedThreshold;
@@ -232,6 +240,11 @@ public class HybridRecommender : IRecommendationEngine
 
         var liked = bucketed.Where(x => x.IsLiked).Select(x => x.Embedding).ToList();
         var disliked = bucketed.Where(x => !x.IsLiked).Select(x => x.Embedding).ToList();
+
+        if (liked.Count == 0 && disliked.Count == 0)
+        {
+            return null;
+        }
 
         if (liked.Count == 0)
         {

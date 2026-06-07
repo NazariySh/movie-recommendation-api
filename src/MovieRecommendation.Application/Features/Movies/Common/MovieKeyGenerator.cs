@@ -16,6 +16,8 @@ public interface IMovieKeyGenerator
 
 public class MovieKeyGenerator : IMovieKeyGenerator
 {
+    private const int MaxBaseKeyLength = 250;
+
     private readonly IMovieRepository _movieRepository;
 
     public MovieKeyGenerator(IMovieRepository movieRepository)
@@ -36,6 +38,11 @@ public class MovieKeyGenerator : IMovieKeyGenerator
         if (string.IsNullOrEmpty(baseKey))
         {
             throw new DomainException(HttpStatusCode.BadRequest, "Cannot derive a key from the supplied title.");
+        }
+
+        if (baseKey.Length > MaxBaseKeyLength)
+        {
+            baseKey = baseKey[..MaxBaseKeyLength];
         }
 
         var key = baseKey;

@@ -28,8 +28,12 @@ public class DeleteUserCommandHandler : ICommandHandler<DeleteUserCommand>
 
     public async Task<Unit> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
-        var user = await _userManager.FindByIdAsync(request.UserId.ToString())
-            ?? throw new NotFoundException($"User with id {request.UserId} not found");
+        var user = await _userManager.FindByIdAsync(request.UserId.ToString());
+
+        if (user is null)
+        {
+            throw new NotFoundException($"User with id {request.UserId} not found");
+        }
 
         if (user.IsDeleted)
         {

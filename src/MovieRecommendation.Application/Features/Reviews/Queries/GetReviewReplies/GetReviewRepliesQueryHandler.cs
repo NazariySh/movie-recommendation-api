@@ -13,8 +13,8 @@ public class GetReviewRepliesQueryHandler : IQueryHandler<GetReviewRepliesQuery,
         _reviewRepository = reviewRepository;
     }
 
-    public Task<IReadOnlyList<MovieReviewDto>> Handle(GetReviewRepliesQuery request, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<MovieReviewDto>> Handle(GetReviewRepliesQuery request, CancellationToken cancellationToken)
     {
-        return _reviewRepository.GetRepliesAsync(request.ReviewId, request.ViewerId, cancellationToken);
+        return await _reviewRepository.GetRepliesAsync(request.ReviewId, request.ViewerId, cancellationToken);
     }
 }

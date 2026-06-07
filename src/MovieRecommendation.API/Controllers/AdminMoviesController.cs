@@ -16,6 +16,8 @@ namespace MovieRecommendation.API.Controllers;
 [Authorize(Roles = $"{RoleTypes.Admin},{RoleTypes.Moderator}")]
 public class AdminMoviesController : BaseController
 {
+    private const long MaxUploadBytes = 16 * 1024 * 1024;
+
     public AdminMoviesController(IMediator mediator) : base(mediator)
     {
     }
@@ -28,9 +30,21 @@ public class AdminMoviesController : BaseController
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(CreateMovieDto request, CancellationToken ct)
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MaxUploadBytes)]
+    public async Task<IActionResult> Create(
+        [FromForm] CreateMovieDto request,
+        IFormFile? poster,
+        IFormFile? backdrop,
+        CancellationToken ct)
     {
-        var id = await Mediator.Send(new CreateMovieCommand(request), ct);
+        await using var posterStream = OpenUpload(poster);
+        await using var backdropStream = OpenUpload(backdrop);
+
+        var id = await Mediator.Send(
+            new CreateMovieCommand(request, AsImageUpload(poster, posterStream), AsImageUpload(backdrop, backdropStream)),
+            ct);
+
         return CreatedAtAction(
             actionName: nameof(MoviesController.GetMovieById),
             controllerName: "Movies",
@@ -39,9 +53,22 @@ public class AdminMoviesController : BaseController
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, UpdateMovieDto request, CancellationToken ct)
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MaxUploadBytes)]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromForm] UpdateMovieDto request,
+        IFormFile? poster,
+        IFormFile? backdrop,
+        CancellationToken ct)
     {
-        await Mediator.Send(new UpdateMovieCommand(id, request), ct);
+        await using var posterStream = OpenUpload(poster);
+        await using var backdropStream = OpenUpload(backdrop);
+
+        await Mediator.Send(
+            new UpdateMovieCommand(id, request, AsImageUpload(poster, posterStream), AsImageUpload(backdrop, backdropStream)),
+            ct);
+
         return NoContent();
     }
 

@@ -32,6 +32,16 @@ public class AzureBlobStorageService : IBlobStorageService
 
     public bool IsConfigured => !string.IsNullOrWhiteSpace(_settings.ConnectionString);
 
+    public bool OwnsUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !IsConfigured)
+        {
+            return false;
+        }
+
+        return url.StartsWith(OwnedUrlPrefix(), StringComparison.OrdinalIgnoreCase);
+    }
+
     public async Task<string> UploadAsync(
         string path,
         Stream content,
@@ -103,5 +113,15 @@ public class AzureBlobStorageService : IBlobStorageService
 
         var baseUrl = _settings.PublicBaseUrl.TrimEnd('/');
         return $"{baseUrl}/{_settings.ContainerName}/{blob.Name}";
+    }
+
+    private string OwnedUrlPrefix()
+    {
+        if (!string.IsNullOrWhiteSpace(_settings.PublicBaseUrl))
+        {
+            return $"{_settings.PublicBaseUrl.TrimEnd('/')}/{_settings.ContainerName}/";
+        }
+
+        return _container.Value.Uri.ToString().TrimEnd('/') + "/";
     }
 }

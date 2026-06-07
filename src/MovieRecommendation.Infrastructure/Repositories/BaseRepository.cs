@@ -48,6 +48,14 @@ public class BaseRepository<TEntity, TKey> : IRepository<TEntity, TKey>
         DbContext.Set<TEntity>().Remove(entity);
     }
 
+    public void DetachRange(IEnumerable<TEntity> entities)
+    {
+        foreach (var entity in entities)
+        {
+            DbContext.Entry(entity).State = EntityState.Detached;
+        }
+    }
+
     public Task<TProjection?> GetAsync<TProjection>(
         Expression<Func<TEntity, bool>> predicate,
         CancellationToken cancellationToken = default)

@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using MovieRecommendation.Application.Common.Models;
 
 namespace MovieRecommendation.API.Controllers;
 
@@ -13,4 +14,12 @@ public abstract class BaseController : ControllerBase
     {
         Mediator = mediator;
     }
+
+    protected static Stream? OpenUpload(IFormFile? file)
+        => file is { Length: > 0 } ? file.OpenReadStream() : null;
+
+    protected static ImageUpload? AsImageUpload(IFormFile? file, Stream? stream)
+        => file is { Length: > 0 } && stream is not null
+            ? new ImageUpload(stream, file.ContentType)
+            : null;
 }

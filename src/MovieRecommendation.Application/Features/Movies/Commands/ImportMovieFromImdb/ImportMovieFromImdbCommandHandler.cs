@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using MovieRecommendation.Application.Abstractions.Messaging;
 using MovieRecommendation.Application.Common;
@@ -13,12 +14,15 @@ namespace MovieRecommendation.Application.Features.Movies.Commands.ImportMovieFr
 
 public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFromImdbCommand, Guid>
 {
+    private const int MaxTextLength = 255;
+    private const int MaxSlugBaseLength = 250;
+
     private readonly IExternalMovieDataProvider _externalProvider;
     private readonly IMovieRepository _movieRepository;
     private readonly IMovieKeyGenerator _keyGenerator;
     private readonly IGenreRepository _genreRepository;
     private readonly IArtistRepository _artistRepository;
-    private readonly IBlobStorageService _blobStorage;
+    private readonly IImageMirrorService _imageMirror;
     private readonly IEmbeddingService? _embeddingService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ICacheService _cache;
@@ -30,7 +34,7 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
         IMovieKeyGenerator keyGenerator,
         IGenreRepository genreRepository,
         IArtistRepository artistRepository,
-        IBlobStorageService blobStorage,
+        IImageMirrorService imageMirror,
         IUnitOfWork unitOfWork,
         ICacheService cache,
         ILogger<ImportMovieFromImdbCommandHandler> logger,
@@ -41,7 +45,7 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
         _keyGenerator = keyGenerator;
         _genreRepository = genreRepository;
         _artistRepository = artistRepository;
-        _blobStorage = blobStorage;
+        _imageMirror = imageMirror;
         _embeddingService = embeddingService;
         _unitOfWork = unitOfWork;
         _cache = cache;
@@ -66,14 +70,24 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
             throw new NotFoundException($"No external data found for IMDb id {imdbId}.");
         }
 
+        var titleExists = await _movieRepository.AnyAsync(
+            m => m.OriginalTitle == external.OriginalTitle,
+            cancellationToken);
+
+        if (titleExists)
+        {
+            throw new AlreadyExistsException(
+                $"Movie with original title '{external.OriginalTitle}' already exists.");
+        }
+
         var key = await _keyGenerator.GenerateUniqueAsync(
             requestedKey: null,
             fallbackSource: external.Title,
             excludeId: null,
             cancellationToken);
 
-        var posterTask = MirrorAsync(external.PosterUrl, $"posters/{key}", cancellationToken);
-        var backdropTask = MirrorAsync(external.BackdropUrl, $"backdrops/{key}", cancellationToken);
+        var posterTask = _imageMirror.MirrorAsync(external.PosterUrl, $"posters/{key}", cancellationToken);
+        var backdropTask = _imageMirror.MirrorAsync(external.BackdropUrl, $"backdrops/{key}", cancellationToken);
         await Task.WhenAll(posterTask, backdropTask);
         var posterUrl = posterTask.Result;
         var backdropUrl = backdropTask.Result;
@@ -84,7 +98,7 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
             ImdbId = external.ImdbId,
             TmdbId = external.TmdbId,
             Type = external.Type,
-            OriginalTitle = external.OriginalTitle,
+            OriginalTitle = Truncate(external.OriginalTitle)!,
             OriginalLang = external.OriginalLang,
             ReleaseDate = external.ReleaseDate,
             Status = external.Status,
@@ -98,7 +112,7 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
                 new MovieTranslation
                 {
                     LanguageCode = "en",
-                    Title = external.Title,
+                    Title = Truncate(external.Title)!,
                     Overview = external.Overview,
                     Tagline = external.Tagline,
                 },
@@ -117,30 +131,6 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
         _logger.LogInformation("Imported movie {MovieId} from IMDb {ImdbId}", movie.Id, imdbId);
 
         return movie.Id;
-    }
-
-    private async Task<string?> MirrorAsync(string? sourceUrl, string path, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(sourceUrl))
-        {
-            return null;
-        }
-
-        try
-        {
-            var ext = Path.GetExtension(new Uri(sourceUrl).AbsolutePath);
-            if (string.IsNullOrEmpty(ext))
-            {
-                ext = ".jpg";
-            }
-
-            return await _blobStorage.CopyFromUrlAsync(sourceUrl, path + ext, cancellationToken);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to mirror image {SourceUrl}; falling back to source URL", sourceUrl);
-            return sourceUrl;
-        }
     }
 
     private async Task<List<MovieGenre>> ResolveGenresAsync(IReadOnlyList<string> names, CancellationToken cancellationToken)
@@ -196,23 +186,28 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var existingByImdb = await _artistRepository.GetByImdbIdsAsync(imdbIds, cancellationToken);
-
-        var slugLookup = validEntries
-            .Where(c => string.IsNullOrWhiteSpace(c.ImdbId) || !existingByImdb.ContainsKey(c.ImdbId!))
-            .Select(c => Slugify.ToSlug(c.Name))
-            .Where(s => !string.IsNullOrEmpty(s))
+        var names = validEntries
+            .Select(c => c.Name.Trim())
+            .Where(n => n.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
 
-        var existingBySlug = await _artistRepository.GetBySlugsAsync(slugLookup, cancellationToken);
+        var existingByImdb = await _artistRepository.GetByImdbIdsAsync(imdbIds, cancellationToken);
+        var existingByName = await _artistRepository.GetByNamesAsync(names, cancellationToken);
 
         var personIdByEntry = new Dictionary<ExternalMovieCast, Guid>();
         var newPersons = new List<Person>();
-        var reservedSlugs = new HashSet<string>(existingBySlug.Keys, StringComparer.OrdinalIgnoreCase);
+        var newByName = new Dictionary<string, Person>(StringComparer.OrdinalIgnoreCase);
+        var reservedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         foreach (var entry in validEntries)
         {
+            var name = entry.Name.Trim();
+            if (name.Length > MaxTextLength)
+            {
+                name = name[..MaxTextLength];
+            }
+
             if (!string.IsNullOrWhiteSpace(entry.ImdbId)
                 && existingByImdb.TryGetValue(entry.ImdbId, out var byImdb))
             {
@@ -220,44 +215,39 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
                 continue;
             }
 
-            var slug = Slugify.ToSlug(entry.Name);
-            if (!string.IsNullOrEmpty(slug)
-                && existingBySlug.TryGetValue(slug, out var bySlug))
+            if (existingByName.TryGetValue(name, out var byName))
             {
-                personIdByEntry[entry] = bySlug.Id;
+                personIdByEntry[entry] = byName.Id;
                 continue;
             }
 
-            var existingNew = newPersons.FirstOrDefault(p =>
-                !string.IsNullOrWhiteSpace(entry.ImdbId) && p.ImdbId == entry.ImdbId ||
-                !string.IsNullOrEmpty(slug) && p.Slug == slug);
-
-            if (existingNew is not null)
+            if (newByName.TryGetValue(name, out var pending))
             {
-                personIdByEntry[entry] = existingNew.Id;
+                personIdByEntry[entry] = pending.Id;
                 continue;
             }
 
-            var uniqueSlug = await GenerateUniquePersonSlugAsync(entry.Name, reservedSlugs, cancellationToken);
+            var uniqueSlug = await GenerateUniquePersonSlugAsync(name, reservedSlugs, cancellationToken);
             reservedSlugs.Add(uniqueSlug);
 
             var person = new Person
             {
                 Slug = uniqueSlug,
-                Name = entry.Name,
-                PhotoUrl = entry.PhotoUrl,
+                Name = name,
+                PhotoUrl = await _imageMirror.MirrorAsync(entry.PhotoUrl, $"artists/{uniqueSlug}", cancellationToken),
                 ImdbId = entry.ImdbId,
                 TmdbId = entry.TmdbId,
             };
 
             _artistRepository.Add(person);
             newPersons.Add(person);
+            newByName[name] = person;
             personIdByEntry[entry] = person.Id;
         }
 
         if (newPersons.Count > 0)
         {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await PersistNewPeopleAsync(newPersons, personIdByEntry, cancellationToken);
         }
 
         var seen = new HashSet<Guid>();
@@ -274,13 +264,99 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
             {
                 PersonId = personId,
                 Role = entry.Role,
-                Character = entry.Character,
+                Character = Truncate(entry.Character),
                 CastOrder = entry.CastOrder,
             });
         }
 
         return resolved;
     }
+
+    private async Task PersistNewPeopleAsync(
+        List<Person> newPersons,
+        Dictionary<ExternalMovieCast, Guid> personIdByEntry,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return;
+        }
+        catch (DbUpdateException ex)
+        {
+            _logger.LogWarning(ex, "Cast insert hit a unique conflict; reconciling against existing people");
+        }
+
+        _artistRepository.DetachRange(newPersons);
+
+        var names = newPersons
+            .Select(p => p.Name)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+        var imdbIds = newPersons
+            .Where(p => !string.IsNullOrWhiteSpace(p.ImdbId))
+            .Select(p => p.ImdbId!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var existingByName = await _artistRepository.GetByNamesAsync(names, cancellationToken);
+        var existingByImdb = await _artistRepository.GetByImdbIdsAsync(imdbIds, cancellationToken);
+
+        var remap = new Dictionary<Guid, Guid>();
+        var stillMissing = new List<Person>();
+
+        foreach (var person in newPersons)
+        {
+            Person? existing = null;
+            if (!string.IsNullOrWhiteSpace(person.ImdbId)
+                && existingByImdb.TryGetValue(person.ImdbId, out var byImdb))
+            {
+                existing = byImdb;
+            }
+            else if (existingByName.TryGetValue(person.Name, out var byName))
+            {
+                existing = byName;
+            }
+
+            if (existing is not null)
+            {
+                remap[person.Id] = existing.Id;
+            }
+            else
+            {
+                stillMissing.Add(person);
+            }
+        }
+
+        foreach (var entry in personIdByEntry.Keys.ToList())
+        {
+            if (remap.TryGetValue(personIdByEntry[entry], out var existingId))
+            {
+                personIdByEntry[entry] = existingId;
+            }
+        }
+
+        if (stillMissing.Count > 0)
+        {
+            foreach (var person in stillMissing)
+            {
+                _artistRepository.Add(person);
+            }
+
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                _artistRepository.DetachRange(stillMissing);
+                throw;
+            }
+        }
+    }
+
+    private static string? Truncate(string? value, int maxLength = MaxTextLength)
+        => value is not null && value.Length > maxLength ? value[..maxLength] : value;
 
     private static List<Season> BuildSeasons(IReadOnlyList<ExternalMovieSeason> seasons)
     {
@@ -290,7 +366,7 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
             .Select(s => new Season
             {
                 SeasonNumber = s.SeasonNumber,
-                Name = s.Name,
+                Name = Truncate(s.Name),
                 Overview = s.Overview,
                 PosterUrl = s.PosterUrl,
                 EpisodeCount = s.EpisodeCount,
@@ -309,6 +385,11 @@ public class ImportMovieFromImdbCommandHandler : ICommandHandler<ImportMovieFrom
         if (string.IsNullOrEmpty(baseSlug))
         {
             baseSlug = $"person-{Guid.NewGuid().ToString()[..8]}";
+        }
+
+        if (baseSlug.Length > MaxSlugBaseLength)
+        {
+            baseSlug = baseSlug[..MaxSlugBaseLength];
         }
 
         var slug = baseSlug;
