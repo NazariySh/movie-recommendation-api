@@ -24,7 +24,7 @@
     <ProjectReference Include="..\MovieRecommendation.ML\MovieRecommendation.ML.csproj" />
   </ItemGroup>
 
-  <Target Name="BuildSpa" AfterTargets="ComputeFilesToPublish" Condition="'$(BuildSpaOnPublish)' == 'true'">
+  <Target Name="BuildSpa" AfterTargets="ComputeFilesToPublish" Condition="'$(BuildSpaOnPublish)' != 'false'">
     <Message Importance="high" Text="Installing SPA dependencies (npm ci)..." />
     <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
 

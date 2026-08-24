@@ -68,7 +68,6 @@ public class AdminUsersController : BaseController
     }
 
     [HttpDelete("{id:guid}")]
-    [EnableRateLimiting("auth-forgot")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
     {
         await Mediator.Send(new AdminDeleteUserCommand(User.GetId(), id), ct);
