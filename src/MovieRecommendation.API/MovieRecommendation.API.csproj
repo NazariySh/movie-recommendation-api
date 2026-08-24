@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <SpaRoot>..\..\..\movie-recommendation-client</SpaRoot>
+    <SpaDist>$(SpaRoot)\dist\movie-recommendation-client\browser</SpaDist>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
+    <PackageReference Include="Azure.Identity" Version="1.13.1" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MovieRecommendation.Application\MovieRecommendation.Application.csproj" />
+    <ProjectReference Include="..\MovieRecommendation.Infrastructure\MovieRecommendation.Infrastructure.csproj" />
+    <ProjectReference Include="..\MovieRecommendation.ML\MovieRecommendation.ML.csproj" />
+  </ItemGroup>
+
+  <Target Name="BuildSpa" AfterTargets="ComputeFilesToPublish" Condition="'$(BuildSpaOnPublish)' != 'false'">
+    <Message Importance="high" Text="Installing SPA dependencies (npm ci)..." />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm ci" />
+
+    <Message Importance="high" Text="Building Angular SPA (production)..." />
+    <Exec WorkingDirectory="$(SpaRoot)" Command="npm run build" />
+
+    <ItemGroup>
+      <SpaDistFiles Include="$(SpaDist)\**\*" />
+      <ResolvedFileToPublish Include="@(SpaDistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+
+    <Message Importance="high" Text="SPA files added to publish: @(SpaDistFiles->Count())" />
+  </Target>
+
+</Project>
