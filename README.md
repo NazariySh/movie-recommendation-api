@@ -1,6 +1,16 @@
 # MovieMatch API
 
-**MovieMatch API** is the backend for a movie/series recommendation platform. It combines collaborative filtering (ML.NET) with semantic search over embeddings (Pgvector) to serve personalized recommendations, alongside standard catalog, auth, review, and admin features. Built with .NET 10 and Clean Architecture (`Domain` → `Application` → `Infrastructure`/`ML` → `API`).
+**MovieMatch API** is the backend for a movie/series recommendation platform. It combines collaborative filtering (ML.NET matrix factorization) with semantic search over embeddings (Pgvector) to produce personalized "for you," cold-start, and "because you watched" recommendations, re-ranked with MMR for diversity.
+
+Beyond recommendations, it covers the full catalog and account surface: movie/series browsing with genres and filters, full-text/fuzzy search, reviews and star ratings, watchlists, a first-run onboarding survey used to bootstrap taste profiles for new users, and an admin area for managing movies, artists, users, and the ML model (data import, training, evaluation). Auth is JWT-based with refresh-token rotation, email verification, password reset, and Google Sign-In.
+
+The solution follows Clean Architecture, split into four projects plus the API host:
+
+- `MovieRecommendation.Domain` – entities, enums, no external dependencies.
+- `MovieRecommendation.Application` – MediatR commands/queries, validators, DTOs, interfaces (business logic, no infrastructure concerns).
+- `MovieRecommendation.Infrastructure` – EF Core/PostgreSQL, Identity, email, blob storage, caching — implementations of the Application interfaces.
+- `MovieRecommendation.ML` – embedding generation, the collaborative-filtering recommender, and semantic search/re-ranking.
+- `MovieRecommendation.API` – ASP.NET Core host: controllers, middleware, DI wiring, and (on publish) hosts the built Angular SPA.
 
 ---
 
